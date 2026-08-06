@@ -8,7 +8,6 @@ This backport brings high-tier EMC automation, storage, and generation mechanics
 
 - **EMC Links:** Connect automation systems and item transport networks directly to the player's personal EMC network for importing, exporting, and remote generation.
 - **Collectors, Relays & Power Flowers:** Compact, TPS-friendly EMC generation and transfer blocks, including single-block Power Flower Bonsai Pots.
-- **Stone Transmutation Table:** A compact slab block providing in-world access to the player's Transmutation Table interface.
 - **High-Tier Progression:** Magnum and Colossal Stars for large-scale EMC storage, expanded matter tiers, Knowledge Sharing Books, and end-game items.
 
 ## Requirements
@@ -17,9 +16,13 @@ This backport brings high-tier EMC automation, storage, and generation mechanics
 - Minecraft Forge `10.13.4.1614` or newer
 - ProjectE `1.7.10-PE1.10.1` or newer
 
+## Downloads & Installation
+
+Prebuilt mod binaries can be downloaded directly from the [Releases](https://github.com/YatzCore/FTB-ProjectEX-1.7.10/releases) page. Place the `.jar` file into your Minecraft `mods` folder along with required dependencies.
+
 ## Building
 
-Build the production binary using Gradle:
+Build the production binary from source using Gradle:
 
 ```bash
 git clone https://github.com/YatzCore/FTB-ProjectEX-1.7.10.git
