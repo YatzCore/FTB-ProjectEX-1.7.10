@@ -1,0 +1,13 @@
+pluginManagement {
+    repositories {
+        mavenCentral()
+        maven {
+            url = 'https://nexus.gtnewhorizons.com/repository/releases/'
+        }
+        maven {
+            url = 'https://maven.minecraftforge.net'
+        }
+        gradlePluginPortal()
+    }
+}
+rootProject.name = 'FTB-ProjectEX-1.7.10'

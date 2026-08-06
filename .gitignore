@@ -1,0 +1,26 @@
+# Gradle temporary files
+.gradle/
+build/
+
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+bin/
+out/
+
+# Minecraft Run directory temporary logs/data
+run/logs/
+run/crash-reports/
+run/saves/
+run/usernamecache.json
+run/options.txt
+run/optionsof.txt
+
+# System files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,43 @@
+plugins {
+    id 'com.gtnewhorizons.retrofuturagradle' version '1.4.3'
+}
+
+version = project.mod_version
+group = project.maven_group
+archivesBaseName = project.archives_base_name
+
+sourceCompatibility = targetCompatibility = '1.8'
+
+minecraft {
+    mcVersion = '1.7.10'
+    username = 'Developer'
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        url = 'https://nexus.gtnewhorizons.com/repository/releases/'
+    }
+}
+
+dependencies {
+    // Local ProjectE jar dependency
+    implementation files(System.getProperty("user.home") + '/AppData/Roaming/.minecraft/versions/HBM NTM 1.7.10/mods/ProjectE-1.7.10-PE1.10.1.jar')
+    // Local CodeChickenCore & NEI dependencies
+    implementation files(System.getProperty("user.home") + '/AppData/Roaming/.minecraft/versions/HBM NTM 1.7.10/mods/CodeChickenCore-1.7.10-1.0.7.47-universal.jar')
+    implementation files(System.getProperty("user.home") + '/AppData/Roaming/.minecraft/versions/HBM NTM 1.7.10/mods/NotEnoughItems-2.8.104-GTNH.jar')
+}
+
+processResources {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    inputs.property "version", project.version
+    inputs.property "mcversion", project.minecraft.mcVersion
+
+    from(sourceSets.main.resources.srcDirs) {
+        include 'mcmod.info'
+        expand 'version': project.version, 'mcversion': project.minecraft.mcVersion
+    }
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'mcmod.info'
+    }
+}

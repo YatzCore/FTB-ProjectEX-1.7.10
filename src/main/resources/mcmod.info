@@ -1,0 +1,21 @@
+[
+  {
+    "modid": "projectex",
+    "name": "Project EX",
+    "description": "ProjectE Expansion mod for 1.7.10. Adds 15 tiers of Matter, Collectors, Relays, Power Flowers, Stars, Personal Links, Stone Table, and Transmutation capabilities.",
+    "version": "1.0.0-1.7.10",
+    "mcversion": "1.7.10",
+    "url": "",
+    "updateUrl": "",
+    "authorList": [
+      "LatvianModder",
+      "Backported to 1.7.10"
+    ],
+    "credits": "FTB Team, ProjectE Team",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": [
+      "ProjectE"
+    ]
+  }
+]
