@@ -8,11 +8,11 @@ import moze_intel.projecte.api.item.IItemEmc;
 import moze_intel.projecte.gameObjs.items.ItemPE;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.IIcon;
+import net.minecraft.util.MathHelper;
 import net.minecraft.util.StatCollector;
 
 import java.util.List;
@@ -26,6 +26,17 @@ public class ItemMagnumStar extends ItemPE implements IItemEmc {
         setMaxDamage(0);
         setMaxStackSize(1);
         setCreativeTab(ProjectEX.TAB);
+    }
+
+    @Override
+    public boolean showDurabilityBar(ItemStack stack) {
+        return getStoredEmc(stack) > 0.0;
+    }
+
+    @Override
+    public double getDurabilityForDisplay(ItemStack stack) {
+        double emc = getStoredEmc(stack);
+        return emc == 0.0 ? 1.0 : MathHelper.clamp_double(1.0 - emc / getMaximumEmc(stack), 0.0, 1.0);
     }
 
     @Override
@@ -65,13 +76,6 @@ public class ItemMagnumStar extends ItemPE implements IItemEmc {
             return icons[0];
         }
         return icons[damage];
-    }
-
-    @Override
-    @SideOnly(Side.CLIENT)
-    @SuppressWarnings("unchecked")
-    public void addInformation(ItemStack stack, EntityPlayer player, List list, boolean advanced) {
-        list.add(StatCollector.translateToLocal("projecte.emc.stored") + " " + String.format("%,.0f", getStoredEmc(stack)) + " / " + String.format("%,.0f", getMaximumEmc(stack)));
     }
 
     @Override

@@ -121,3 +121,8 @@ item.projectex.final_star_shard.name=The Final Star Shard
 item.projectex.final_star.name=The Final Star
 item.projectex.final_star.tooltip=Place a chest next to Pedestal and drop item on top of it to clone it infinitely.
 item.projectex.knowledge_sharing_book.name=Knowledge Sharing Book
+
+tile.projectex.me_emc_link.name=ME EMC Link
+tile.projectex.me_emc_link.tooltip=Connects directly to your personal Transmutation Table balance and exposes learned items to the AE2 network.
+item.projectex.me_emc_cell.name=ME Transmutation Storage Cell
+container.projectex.me_emc_link=ME EMC Link

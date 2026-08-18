@@ -9,13 +9,11 @@ import moze_intel.projecte.api.item.IPedestalItem;
 import moze_intel.projecte.gameObjs.items.ItemPE;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.AxisAlignedBB;
-import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
@@ -48,15 +46,6 @@ public class ItemFinalStar extends ItemPE implements IItemEmc, IPedestalItem {
     }
 
     @Override
-    @SideOnly(Side.CLIENT)
-    @SuppressWarnings("unchecked")
-    public void addInformation(ItemStack stack, EntityPlayer player, List list, boolean advanced) {
-        list.add(StatCollector.translateToLocal("projecte.emc.stored") + " " + String.format("%,.0f", getStoredEmc(stack)) + " / Infinite");
-        list.add(EnumChatFormatting.YELLOW + StatCollector.translateToLocal("item.projectex.final_star.tooltip"));
-        list.add(EnumChatFormatting.GRAY + "Pedestal: Right-click Pedestal to ACTIVATE. Clones items on top into adjacent chest.");
-    }
-
-    @Override
     public void updateInPedestal(World world, int x, int y, int z) {
         if (world == null || world.isRemote) {
             return;
@@ -64,7 +53,7 @@ public class ItemFinalStar extends ItemPE implements IItemEmc, IPedestalItem {
 
         // Run every 20 ticks (1 second)
         if (world.getTotalWorldTime() % 20L == 0L) {
-            // Expanded search AABB around top of pedestal
+            // Search AABB around top of pedestal
             AxisAlignedBB box = AxisAlignedBB.getBoundingBox(x - 0.5, y, z - 0.5, x + 1.5, y + 2.5, z + 1.5);
             @SuppressWarnings("unchecked")
             List<EntityItem> items = world.getEntitiesWithinAABB(EntityItem.class, box);
@@ -84,7 +73,7 @@ public class ItemFinalStar extends ItemPE implements IItemEmc, IPedestalItem {
                                     IInventory inv = (IInventory) tile;
                                     ItemStack result = ProjectEXUtils.insertStackIntoInventory(inv, copyToInsert, dir.getOpposite());
                                     if (result == null || result.stackSize < copyToInsert.stackSize) {
-                                        // Item cloned and inserted into inventory!
+                                        // Item cloned and inserted into inventory
                                         break;
                                     }
                                 }

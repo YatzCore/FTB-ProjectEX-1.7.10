@@ -57,7 +57,7 @@ public class ProjectEXEventHandler {
             ItemStack currentMatter = new ItemStack(ProjectEXItems.MATTER, 1, i);
             ItemStack nextMatter = new ItemStack(ProjectEXItems.MATTER, 1, i + 1);
 
-            // Official FTB-ProjectEX 1.12.2 Horizontal Recipe: A A A / M M M / A A A
+            // Horizontal Recipe: A A A / M M M / A A A
             GameRegistry.addRecipe(new ShapedOreRecipe(
                 nextMatter.copy(),
                 "AAA",
@@ -67,7 +67,7 @@ public class ProjectEXEventHandler {
                 'M', currentMatter
             ));
 
-            // Official FTB-ProjectEX 1.12.2 Vertical Recipe: A M A / A M A / A M A
+            // Vertical Recipe: A M A / A M A / A M A
             GameRegistry.addRecipe(new ShapedOreRecipe(
                 nextMatter.copy(),
                 "AMA",
@@ -77,142 +77,186 @@ public class ProjectEXEventHandler {
                 'M', currentMatter
             ));
 
-            // Reverse: 1 higher matter -> 4 lower matter
+            // Reverse: 1 higher matter -> 3 lower matter (official ratio)
             GameRegistry.addRecipe(new ShapelessOreRecipe(
-                new ItemStack(ProjectEXItems.MATTER, 4, i),
+                new ItemStack(ProjectEXItems.MATTER, 3, i),
                 nextMatter.copy()
             ));
         }
 
-        // Advanced Star Shard: Nether Star + 4 Magenta Matter
-        GameRegistry.addRecipe(new ShapedOreRecipe(
-            new ItemStack(ProjectEXItems.ADVANCED_STAR_SHARD, 1),
-            " M ",
-            "MSM",
-            " M ",
-            'S', Items.nether_star,
-            'M', new ItemStack(ProjectEXItems.MATTER, 1, 0)
-        ));
-
-        // Knowledge Sharing Book: Book + Dark Matter
+        // 3. Official Magnum Star Recipes (4x previous star shapeless)
+        // Magnum Star Ein = 4x Klein Star Omega (data 5)
         GameRegistry.addRecipe(new ShapelessOreRecipe(
-            new ItemStack(ProjectEXItems.KNOWLEDGE_SHARING_BOOK),
-            Items.book,
-            new ItemStack(ObjHandler.matter, 1, 0)
+            new ItemStack(ProjectEXItems.MAGNUM_STAR, 1, 0),
+            new ItemStack(ObjHandler.kleinStars, 1, 5),
+            new ItemStack(ObjHandler.kleinStars, 1, 5),
+            new ItemStack(ObjHandler.kleinStars, 1, 5),
+            new ItemStack(ObjHandler.kleinStars, 1, 5)
         ));
 
-        // Stone Table: Smooth stone + Dark Matter
-        GameRegistry.addRecipe(new ShapedOreRecipe(
-            new ItemStack(ProjectEXBlocks.STONE_TABLE, 1, 0),
-            "SSS",
-            " M ",
-            " S ",
-            'S', Blocks.stone,
-            'M', new ItemStack(ObjHandler.matter, 1, 0)
-        ));
-
-        // Links: Dark Matter + Transmutation Tablet + Diamond Block
-        GameRegistry.addRecipe(new ShapedOreRecipe(
-            new ItemStack(ProjectEXBlocks.PERSONAL_LINK),
-            "DMD",
-            "MTM",
-            "DMD",
-            'D', Blocks.diamond_block,
-            'M', new ItemStack(ObjHandler.matter, 1, 0),
-            'T', ObjHandler.transmutationTablet
-        ));
-
-        GameRegistry.addRecipe(new ShapedOreRecipe(
-            new ItemStack(ProjectEXBlocks.REFINED_LINK),
-            " R ",
-            "RLR",
-            " R ",
-            'L', ProjectEXBlocks.PERSONAL_LINK,
-            'R', new ItemStack(ProjectEXItems.MATTER, 1, 0)
-        ));
-
-        GameRegistry.addRecipe(new ShapedOreRecipe(
-            new ItemStack(ProjectEXBlocks.COMPRESSED_REFINED_LINK),
-            " R ",
-            "RLR",
-            " R ",
-            'L', ProjectEXBlocks.REFINED_LINK,
-            'R', new ItemStack(ProjectEXItems.MATTER, 1, 1)
-        ));
-
-        // Magnum Star & Colossal Star Recipes (6 Tiers: Ein, Zwei, Drei, Vier, Sphere, Omega)
-        for (int i = 0; i < StarTier.VALUES.length; i++) {
-            // Magnum Star: 4x Klein Star (or previous Magnum Star) + Advanced Star Shard
-            GameRegistry.addRecipe(new ShapedOreRecipe(
+        for (int i = 1; i < StarTier.VALUES.length; i++) {
+            GameRegistry.addRecipe(new ShapelessOreRecipe(
                 new ItemStack(ProjectEXItems.MAGNUM_STAR, 1, i),
-                " S ",
-                "SAS",
-                " S ",
-                'S', new ItemStack(ObjHandler.kleinStars, 1, i),
-                'A', ProjectEXItems.ADVANCED_STAR_SHARD
-            ));
-
-            // Colossal Star: 4x Magnum Star + Advanced Star Shard
-            GameRegistry.addRecipe(new ShapedOreRecipe(
-                new ItemStack(ProjectEXItems.COLOSSAL_STAR, 1, i),
-                " M ",
-                "MSM",
-                " M ",
-                'M', new ItemStack(ProjectEXItems.MAGNUM_STAR, 1, i),
-                'S', ProjectEXItems.ADVANCED_STAR_SHARD
+                new ItemStack(ProjectEXItems.MAGNUM_STAR, 1, i - 1),
+                new ItemStack(ProjectEXItems.MAGNUM_STAR, 1, i - 1),
+                new ItemStack(ProjectEXItems.MAGNUM_STAR, 1, i - 1),
+                new ItemStack(ProjectEXItems.MAGNUM_STAR, 1, i - 1)
             ));
         }
 
-        // 16 Tiers for Collectors, Relays, Power Flowers (Basic .. Final)
-        for (int i = 0; i < EnumTier.VALUES.length; i++) {
+        // 4. Official Colossal Star Recipes (4x previous star shapeless)
+        // Colossal Star Ein = 4x Magnum Star Omega (data 5)
+        GameRegistry.addRecipe(new ShapelessOreRecipe(
+            new ItemStack(ProjectEXItems.COLOSSAL_STAR, 1, 0),
+            new ItemStack(ProjectEXItems.MAGNUM_STAR, 1, 5),
+            new ItemStack(ProjectEXItems.MAGNUM_STAR, 1, 5),
+            new ItemStack(ProjectEXItems.MAGNUM_STAR, 1, 5),
+            new ItemStack(ProjectEXItems.MAGNUM_STAR, 1, 5)
+        ));
+
+        for (int i = 1; i < StarTier.VALUES.length; i++) {
+            GameRegistry.addRecipe(new ShapelessOreRecipe(
+                new ItemStack(ProjectEXItems.COLOSSAL_STAR, 1, i),
+                new ItemStack(ProjectEXItems.COLOSSAL_STAR, 1, i - 1),
+                new ItemStack(ProjectEXItems.COLOSSAL_STAR, 1, i - 1),
+                new ItemStack(ProjectEXItems.COLOSSAL_STAR, 1, i - 1),
+                new ItemStack(ProjectEXItems.COLOSSAL_STAR, 1, i - 1)
+            ));
+        }
+
+        // 5. Official Final Star Shard (Advanced Star Shard) Recipe: 8x Colossal Star Omega + 1 Nether Star
+        GameRegistry.addRecipe(new ShapedOreRecipe(
+            new ItemStack(ProjectEXItems.ADVANCED_STAR_SHARD, 1),
+            "SSS",
+            "SNS",
+            "SSS",
+            'S', new ItemStack(ProjectEXItems.COLOSSAL_STAR, 1, 5),
+            'N', Items.nether_star
+        ));
+
+        // 6. Official Knowledge Sharing Book Recipe: 4 Violet Matter + 4 Nether Star + 1 Writable Book
+        GameRegistry.addRecipe(new ShapedOreRecipe(
+            new ItemStack(ProjectEXItems.KNOWLEDGE_SHARING_BOOK),
+            "RNR",
+            "NBN",
+            "RNR",
+            'R', new ItemStack(ProjectEXItems.MATTER, 1, 3), // Violet Matter
+            'N', Items.nether_star,
+            'B', Items.writable_book
+        ));
+
+        // 7. Official Stone Table Recipe: 8 Stone Bricks + 1 Transmutation Table / Philosopher's Stone
+        GameRegistry.addRecipe(new ShapedOreRecipe(
+            new ItemStack(ProjectEXBlocks.STONE_TABLE, 1, 0),
+            "SSS",
+            "STS",
+            "SSS",
+            'S', Blocks.stonebrick,
+            'T', ObjHandler.transmuteStone
+        ));
+        GameRegistry.addRecipe(new ShapedOreRecipe(
+            new ItemStack(ProjectEXBlocks.STONE_TABLE, 1, 0),
+            "SSS",
+            "STS",
+            "SSS",
+            'S', Blocks.stonebrick,
+            'T', ObjHandler.philosStone
+        ));
+
+        // 8. Official Links Recipes
+        // Personal Link: 4 Dark Matter + 4 Red Matter Blocks + 1 Condenser MK2
+        GameRegistry.addRecipe(new ShapedOreRecipe(
+            new ItemStack(ProjectEXBlocks.PERSONAL_LINK),
+            "RBR",
+            "BCB",
+            "RBR",
+            'R', new ItemStack(ObjHandler.matterBlock, 1, 1), // Red Matter Block
+            'B', new ItemStack(ObjHandler.matter, 1, 0),      // Dark Matter
+            'C', ObjHandler.condenserMk2
+        ));
+
+        // Refined Link: 9x Personal Link
+        GameRegistry.addRecipe(new ShapedOreRecipe(
+            new ItemStack(ProjectEXBlocks.REFINED_LINK),
+            "LLL",
+            "LLL",
+            "LLL",
+            'L', ProjectEXBlocks.PERSONAL_LINK
+        ));
+
+        // Compressed Refined Link: 6x Refined Link
+        GameRegistry.addRecipe(new ShapedOreRecipe(
+            new ItemStack(ProjectEXBlocks.COMPRESSED_REFINED_LINK),
+            "LLL",
+            "LLL",
+            "LLL",
+            'L', ProjectEXBlocks.REFINED_LINK
+        ));
+
+        // 9. Official Collector & Relay Progression (16 Tiers: 0..15)
+        // Conversions from ProjectE MK1, MK2, MK3
+        GameRegistry.addRecipe(new ShapelessOreRecipe(new ItemStack(ProjectEXBlocks.COLLECTOR, 1, 0), ObjHandler.energyCollector));
+        GameRegistry.addRecipe(new ShapelessOreRecipe(new ItemStack(ProjectEXBlocks.COLLECTOR, 1, 1), ObjHandler.collectorMK2));
+        GameRegistry.addRecipe(new ShapelessOreRecipe(new ItemStack(ProjectEXBlocks.COLLECTOR, 1, 2), ObjHandler.collectorMK3));
+
+        GameRegistry.addRecipe(new ShapelessOreRecipe(new ItemStack(ProjectEXBlocks.RELAY, 1, 0), ObjHandler.relay));
+        GameRegistry.addRecipe(new ShapelessOreRecipe(new ItemStack(ProjectEXBlocks.RELAY, 1, 1), ObjHandler.relayMK2));
+        GameRegistry.addRecipe(new ShapelessOreRecipe(new ItemStack(ProjectEXBlocks.RELAY, 1, 2), ObjHandler.relayMK3));
+
+        // Shapeless progression: 1x prev Collector/Relay + 1x Tier Matter/Shard
+        for (int i = 1; i < EnumTier.VALUES.length; i++) {
             ItemStack matterStack;
-            if (i == 0) matterStack = new ItemStack(Blocks.diamond_block);
-            else if (i == 1) matterStack = new ItemStack(ObjHandler.matter, 1, 0); // Dark
+            if (i == 1) matterStack = new ItemStack(ObjHandler.matter, 1, 0); // Dark
             else if (i == 2) matterStack = new ItemStack(ObjHandler.matter, 1, 1); // Red
             else if (i < 15) matterStack = new ItemStack(ProjectEXItems.MATTER, 1, i - 3); // Magenta..Fading
             else matterStack = new ItemStack(ProjectEXItems.ADVANCED_STAR_SHARD); // Final
 
-            // Collector Tier Progression
-            GameRegistry.addRecipe(new ShapedOreRecipe(
+            // Collector
+            GameRegistry.addRecipe(new ShapelessOreRecipe(
                 new ItemStack(ProjectEXBlocks.COLLECTOR, 1, i),
-                "SMS",
-                "MCM",
-                "SMS",
-                'S', new ItemStack(ObjHandler.kleinStars, 1, Math.min(i, 5)),
-                'M', matterStack,
-                'C', i == 0 ? ObjHandler.energyCollector : (i <= 2 ? ObjHandler.collectorMK2 : new ItemStack(ProjectEXBlocks.COLLECTOR, 1, i - 1))
+                new ItemStack(ProjectEXBlocks.COLLECTOR, 1, i - 1),
+                matterStack
             ));
 
-            // Relay Tier Progression
-            GameRegistry.addRecipe(new ShapedOreRecipe(
+            // Relay
+            GameRegistry.addRecipe(new ShapelessOreRecipe(
                 new ItemStack(ProjectEXBlocks.RELAY, 1, i),
-                "SMS",
-                "MRM",
-                "SMS",
-                'S', new ItemStack(ObjHandler.kleinStars, 1, Math.min(i, 5)),
-                'M', matterStack,
-                'R', i == 0 ? ObjHandler.relay : (i <= 2 ? ObjHandler.relayMK2 : new ItemStack(ProjectEXBlocks.RELAY, 1, i - 1))
+                new ItemStack(ProjectEXBlocks.RELAY, 1, i - 1),
+                matterStack
+            ));
+        }
+
+        // 10. Official Compressed Collector & Power Flower Recipes (16 Tiers: 0..15)
+        for (int i = 0; i < EnumTier.VALUES.length; i++) {
+            // Compressed Collector: 9x Collector of tier i
+            GameRegistry.addRecipe(new ShapedOreRecipe(
+                new ItemStack(ProjectEXItems.COMPRESSED_COLLECTOR, 1, i),
+                "CCC",
+                "CCC",
+                "CCC",
+                'C', new ItemStack(ProjectEXBlocks.COLLECTOR, 1, i)
             ));
 
-            // Power Flower: Collector + Relay of same tier
+            // Power Flower: 2x Compressed Collector + 6x Relay + 1x Personal Link
             GameRegistry.addRecipe(new ShapedOreRecipe(
                 new ItemStack(ProjectEXBlocks.POWER_FLOWER, 1, i),
-                " C ",
-                "CRC",
-                " C ",
-                'C', new ItemStack(ProjectEXBlocks.COLLECTOR, 1, i),
+                "CLC",
+                "RRR",
+                "RRR",
+                'C', new ItemStack(ProjectEXItems.COMPRESSED_COLLECTOR, 1, i),
+                'L', ProjectEXBlocks.PERSONAL_LINK,
                 'R', new ItemStack(ProjectEXBlocks.RELAY, 1, i)
             ));
         }
 
-        // Final Star: 4x Colossal Star Omega + Nether Star
+        // 11. Official Final Star Recipe: 8x Final Power Flower (Tier 15) + 1 Dragon Egg
         GameRegistry.addRecipe(new ShapedOreRecipe(
             new ItemStack(ProjectEXItems.FINAL_STAR),
-            " C ",
-            "CSC",
-            " C ",
-            'S', Items.nether_star,
-            'C', new ItemStack(ProjectEXItems.COLOSSAL_STAR, 1, 5)
+            "SSS",
+            "SES",
+            "SSS",
+            'S', new ItemStack(ProjectEXBlocks.POWER_FLOWER, 1, 15),
+            'E', Blocks.dragon_egg
         ));
     }
 }

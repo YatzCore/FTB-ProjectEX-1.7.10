@@ -11,6 +11,7 @@ public class ProjectEXItems {
     public static ItemFinalStar FINAL_STAR;
     public static ItemKnowledgeSharingBook KNOWLEDGE_SHARING_BOOK;
     public static ItemAdvancedStarShard ADVANCED_STAR_SHARD;
+    public static ItemCompressedCollector COMPRESSED_COLLECTOR;
 
     public static void init() {
         MATTER = new ItemMatter();
@@ -33,5 +34,8 @@ public class ProjectEXItems {
 
         ADVANCED_STAR_SHARD = new ItemAdvancedStarShard();
         GameRegistry.registerItem(ADVANCED_STAR_SHARD, "advanced_star_shard");
+
+        COMPRESSED_COLLECTOR = new ItemCompressedCollector();
+        GameRegistry.registerItem(COMPRESSED_COLLECTOR, "compressed_collector");
     }
 }

@@ -14,6 +14,8 @@ public class TileStoneTable extends TileEntity implements IInventory {
     private ItemStack[] inventory = new ItemStack[3]; // 0 = Input, 1 = Output, 2 = Fuel
     public int progress = 0;
     public int maxProgress = 200;
+    private AlchemyTableRecipes.AlchemyTableRecipe cachedRecipe = null;
+    private ItemStack lastInput = null;
 
     @Override
     public boolean canUpdate() {
@@ -27,14 +29,16 @@ public class TileStoneTable extends TileEntity implements IInventory {
             ItemStack fuel = inventory[2];
 
             if (input != null) {
-                AlchemyTableRecipes.AlchemyTableRecipe recipe = AlchemyTableRecipes.INSTANCE.findRecipe(input);
-                if (recipe != null) {
-                    // Check if output slot can accept recipe output
-                    if (inventory[1] == null || (inventory[1].isItemEqual(recipe.output) && inventory[1].stackSize < inventory[1].getMaxStackSize())) {
-                        // Check if fuel is IItemEmc and has enough EMC
+                if (cachedRecipe == null || lastInput == null || !lastInput.isItemEqual(input)) {
+                    cachedRecipe = AlchemyTableRecipes.INSTANCE.findRecipe(input);
+                    lastInput = input.copy();
+                }
+
+                if (cachedRecipe != null) {
+                    if (inventory[1] == null || (inventory[1].isItemEqual(cachedRecipe.output) && inventory[1].stackSize < inventory[1].getMaxStackSize())) {
                         if (fuel != null && fuel.getItem() instanceof IItemEmc) {
                             IItemEmc emcItem = (IItemEmc) fuel.getItem();
-                            double emcPerTick = recipe.emcCost / maxProgress;
+                            double emcPerTick = cachedRecipe.emcCost / maxProgress;
                             if (emcItem.getStoredEmc(fuel) >= emcPerTick) {
                                 emcItem.extractEmc(fuel, emcPerTick);
                                 progress++;
@@ -42,10 +46,12 @@ public class TileStoneTable extends TileEntity implements IInventory {
                                     progress = 0;
                                     decrStackSize(0, 1);
                                     if (inventory[1] == null) {
-                                        inventory[1] = recipe.output.copy();
+                                        inventory[1] = cachedRecipe.output.copy();
                                     } else {
-                                        inventory[1].stackSize += recipe.output.stackSize;
+                                        inventory[1].stackSize += cachedRecipe.output.stackSize;
                                     }
+                                    cachedRecipe = null;
+                                    lastInput = null;
                                     markDirty();
                                 }
                                 return;
@@ -53,7 +59,11 @@ public class TileStoneTable extends TileEntity implements IInventory {
                         }
                     }
                 }
+            } else {
+                cachedRecipe = null;
+                lastInput = null;
             }
+
             if (progress > 0) {
                 progress = 0;
                 markDirty();
@@ -89,12 +99,16 @@ public class TileStoneTable extends TileEntity implements IInventory {
             if (inventory[slot].stackSize <= count) {
                 itemstack = inventory[slot];
                 inventory[slot] = null;
+                cachedRecipe = null;
+                lastInput = null;
                 markDirty();
                 return itemstack;
             } else {
                 itemstack = inventory[slot].splitStack(count);
                 if (inventory[slot].stackSize == 0) {
                     inventory[slot] = null;
+                    cachedRecipe = null;
+                    lastInput = null;
                 }
                 markDirty();
                 return itemstack;
@@ -108,6 +122,8 @@ public class TileStoneTable extends TileEntity implements IInventory {
         if (inventory[slot] != null) {
             ItemStack stack = inventory[slot];
             inventory[slot] = null;
+            cachedRecipe = null;
+            lastInput = null;
             return stack;
         }
         return null;
@@ -119,6 +135,10 @@ public class TileStoneTable extends TileEntity implements IInventory {
             inventory[slot] = stack;
             if (stack != null && stack.stackSize > getInventoryStackLimit()) {
                 stack.stackSize = getInventoryStackLimit();
+            }
+            if (slot == 0) {
+                cachedRecipe = null;
+                lastInput = null;
             }
             markDirty();
         }
@@ -171,6 +191,8 @@ public class TileStoneTable extends TileEntity implements IInventory {
                 inventory[slot] = ItemStack.loadItemStackFromNBT(itemTag);
             }
         }
+        cachedRecipe = null;
+        lastInput = null;
     }
 
     @Override

@@ -24,3 +24,12 @@ run/optionsof.txt
 # System files
 .DS_Store
 Thumbs.db
+
+# Workspace & scratch files
+.agents/
+backup/
+logs/
+ORIGINAL_REQUEST.md
+PROJECT.md
+TEST_INFRA.md
+

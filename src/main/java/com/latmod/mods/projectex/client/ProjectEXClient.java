@@ -11,7 +11,7 @@ public class ProjectEXClient extends ProjectEXCommon {
     @Override
     public void init() {
         super.init();
-        ProjectESearchFix.init();
+        ProjectEXToolTipHandler.init();
     }
 
     @Override
