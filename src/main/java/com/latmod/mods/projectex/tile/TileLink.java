@@ -110,7 +110,7 @@ public class TileLink extends TileEntity implements IInventory, IEmcAcceptor {
                 if (storedEmc > 0) {
                     EntityPlayer player = getPlayer();
                     if (player != null) {
-                        double newEmc = Transmutation.getEmc(player) + storedEmc;
+                        double newEmc = ProjectEXUtils.getPlayerEmcSafe(player) + storedEmc;
                         ProjectEXUtils.syncPlayerEMCAndKnowledge(player, newEmc, null);
                         storedEmc = 0.0;
                     }
@@ -143,6 +143,11 @@ public class TileLink extends TileEntity implements IInventory, IEmcAcceptor {
     @Override
     public double acceptEMC(ForgeDirection side, double amount) {
         storedEmc += amount;
+        return amount;
+    }
+
+    public long acceptEMC(ForgeDirection side, long amount) {
+        storedEmc += (double) amount;
         return amount;
     }
 

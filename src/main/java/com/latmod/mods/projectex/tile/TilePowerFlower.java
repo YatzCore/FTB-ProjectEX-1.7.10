@@ -82,7 +82,7 @@ public class TilePowerFlower extends TileEntity {
 
                 EntityPlayer player = getPlayer();
                 if (player != null) {
-                    double newEmc = Transmutation.getEmc(player) + storedEmc;
+                    double newEmc = com.latmod.mods.projectex.ProjectEXUtils.getPlayerEmcSafe(player) + storedEmc;
                     com.latmod.mods.projectex.ProjectEXUtils.syncPlayerEMCAndKnowledge(player, newEmc, null);
                     storedEmc = 0.0;
                 }

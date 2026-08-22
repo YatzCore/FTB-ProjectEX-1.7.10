@@ -104,11 +104,38 @@ public class ProjectEXEMCRegistration {
 
     private static void register(ItemStack stack, long emc) {
         if (stack != null && stack.getItem() != null && emc > 0) {
-            int emcInt = (int) Math.min(emc, Integer.MAX_VALUE);
+            boolean registered = false;
             try {
-                ProjectEAPI.getEMCProxy().registerCustomEMC(stack, emcInt);
-            } catch (Exception e) {
-                e.printStackTrace();
+                Object proxy = ProjectEAPI.getEMCProxy();
+                if (proxy != null) {
+                    for (java.lang.reflect.Method m : proxy.getClass().getMethods()) {
+                        if (m.getName().equals("registerCustomEMC") && m.getParameterTypes().length == 2 && m.getParameterTypes()[0] == ItemStack.class) {
+                            Class<?> p2 = m.getParameterTypes()[1];
+                            if (p2 == long.class) {
+                                m.invoke(proxy, stack, emc);
+                                registered = true;
+                                break;
+                            } else if (p2 == int.class) {
+                                m.invoke(proxy, stack, (int) Math.min(emc, (long) Integer.MAX_VALUE));
+                                registered = true;
+                                break;
+                            } else if (p2 == Number.class) {
+                                m.invoke(proxy, stack, Long.valueOf(emc));
+                                registered = true;
+                                break;
+                            } else if (p2 == double.class) {
+                                m.invoke(proxy, stack, (double) emc);
+                                registered = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {}
+            if (!registered) {
+                try {
+                    ProjectEAPI.getEMCProxy().registerCustomEMC(stack, (int) Math.min(emc, Integer.MAX_VALUE));
+                } catch (Throwable ignored) {}
             }
         }
     }
@@ -164,5 +191,7 @@ public class ProjectEXEMCRegistration {
         if (ProjectEXConfig.finalStarEmc > 0) {
             register(new ItemStack(ProjectEXItems.FINAL_STAR), ProjectEXConfig.finalStarEmc);
         }
+
+        ProjectEXUtils.sanitizeEmcMapper();
     }
 }

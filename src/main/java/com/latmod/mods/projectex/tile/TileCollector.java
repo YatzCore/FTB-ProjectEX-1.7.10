@@ -2,6 +2,7 @@ package com.latmod.mods.projectex.tile;
 
 import com.latmod.mods.projectex.EnumTier;
 import com.latmod.mods.projectex.ProjectEXConfig;
+import com.latmod.mods.projectex.ProjectEXUtils;
 import moze_intel.projecte.api.tile.IEmcAcceptor;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
@@ -37,12 +38,13 @@ public class TileCollector extends TileEntity {
             if (storedEmc > 0) {
                 for (ForgeDirection dir : ForgeDirection.VALID_DIRECTIONS) {
                     TileEntity tile = worldObj.getTileEntity(xCoord + dir.offsetX, yCoord + dir.offsetY, zCoord + dir.offsetZ);
-                    if (tile instanceof IEmcAcceptor) {
-                        IEmcAcceptor acceptor = (IEmcAcceptor) tile;
-                        double needed = acceptor.getMaximumEmc() - acceptor.getStoredEmc();
+                    if (tile != null) {
+                        double max = ProjectEXUtils.getTileMaximumEmc(tile);
+                        double stored = ProjectEXUtils.getTileStoredEmc(tile);
+                        double needed = max - stored;
                         if (needed > 0) {
                             double toSend = Math.min(storedEmc, needed);
-                            double accepted = acceptor.acceptEMC(dir.getOpposite(), toSend);
+                            double accepted = ProjectEXUtils.acceptTileEmc(tile, dir.getOpposite(), toSend);
                             storedEmc -= accepted;
                             if (storedEmc <= 0) break;
                         }

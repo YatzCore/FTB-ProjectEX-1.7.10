@@ -94,12 +94,20 @@ public class ItemStar extends ItemPE implements IItemEmc {
         return toAdd;
     }
 
+    public long addEmc(ItemStack stack, long amount) {
+        return (long) Math.min((double) Long.MAX_VALUE, addEmc(stack, (double) amount));
+    }
+
     @Override
     public double extractEmc(ItemStack stack, double amount) {
         double current = getStoredEmc(stack);
         double toRemove = Math.min(amount, current);
         setStoredEmc(stack, current - toRemove);
         return toRemove;
+    }
+
+    public long extractEmc(ItemStack stack, long amount) {
+        return (long) Math.min((double) Long.MAX_VALUE, extractEmc(stack, (double) amount));
     }
 
     @Override

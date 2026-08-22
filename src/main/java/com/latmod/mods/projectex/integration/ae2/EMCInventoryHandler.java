@@ -201,7 +201,7 @@ public class EMCInventoryHandler implements IMEInventoryHandler<IAEItemStack> {
             Object lock = uuid != null ? ProjectEXUtils.getPlayerLock(uuid) : new Object();
             synchronized (lock) {
                 double totalAdd = itemEmc * (double) input.getStackSize();
-                double currentEmc = Transmutation.getEmc(player);
+                double currentEmc = ProjectEXUtils.getPlayerEmcSafe(player);
                 double newEmc = currentEmc + totalAdd;
                 if (newEmc < 0.0 || Double.isInfinite(newEmc) || Double.isNaN(newEmc)) {
                     newEmc = Double.MAX_VALUE;
@@ -234,7 +234,7 @@ public class EMCInventoryHandler implements IMEInventoryHandler<IAEItemStack> {
         Object lock = uuid != null ? ProjectEXUtils.getPlayerLock(uuid) : new Object();
 
         synchronized (lock) {
-            double playerEmc = Transmutation.getEmc(player);
+            double playerEmc = ProjectEXUtils.getPlayerEmcSafe(player);
             if (playerEmc < cost) return null;
 
             long affordable = (long) Math.floor(playerEmc / cost);
@@ -262,7 +262,7 @@ public class EMCInventoryHandler implements IMEInventoryHandler<IAEItemStack> {
         EntityPlayer player = getPlayer();
         if (player == null) return out;
 
-        double playerEmc = Transmutation.getEmc(player);
+        double playerEmc = ProjectEXUtils.getPlayerEmcSafe(player);
         if (playerEmc <= 0.0) return out;
 
         int mode = getFilterMode();

@@ -2,6 +2,7 @@ package com.latmod.mods.projectex.tile;
 
 import com.latmod.mods.projectex.EnumTier;
 import com.latmod.mods.projectex.ProjectEXConfig;
+import com.latmod.mods.projectex.ProjectEXUtils;
 import moze_intel.projecte.api.tile.IEmcAcceptor;
 import moze_intel.projecte.api.tile.IEmcProvider;
 import net.minecraft.nbt.NBTTagCompound;
@@ -27,12 +28,13 @@ public class TileRelay extends TileEntity implements IEmcAcceptor, IEmcProvider 
             if (storedEmc > 0) {
                 for (ForgeDirection dir : ForgeDirection.VALID_DIRECTIONS) {
                     TileEntity tile = worldObj.getTileEntity(xCoord + dir.offsetX, yCoord + dir.offsetY, zCoord + dir.offsetZ);
-                    if (tile instanceof IEmcAcceptor && !(tile instanceof TileRelay)) {
-                        IEmcAcceptor acceptor = (IEmcAcceptor) tile;
-                        double needed = acceptor.getMaximumEmc() - acceptor.getStoredEmc();
+                    if (tile != null && !(tile instanceof TileRelay)) {
+                        double max = ProjectEXUtils.getTileMaximumEmc(tile);
+                        double stored = ProjectEXUtils.getTileStoredEmc(tile);
+                        double needed = max - stored;
                         if (needed > 0) {
                             double toSend = Math.min(storedEmc, Math.min(transferRate, needed));
-                            double accepted = acceptor.acceptEMC(dir.getOpposite(), toSend);
+                            double accepted = ProjectEXUtils.acceptTileEmc(tile, dir.getOpposite(), toSend);
                             storedEmc -= accepted;
                             if (storedEmc <= 0) break;
                         }
@@ -50,7 +52,12 @@ public class TileRelay extends TileEntity implements IEmcAcceptor, IEmcProvider 
 
     @Override
     public double getMaximumEmc() {
-        int meta = getBlockMetadata();
+        int meta = 0;
+        if (worldObj != null) {
+            meta = getBlockMetadata();
+        } else if (blockMetadata >= 0) {
+            meta = blockMetadata;
+        }
         if (meta < 0 || meta >= EnumTier.VALUES.length) meta = 0;
         return ProjectEXConfig.relayMaxEmc[meta];
     }
@@ -64,12 +71,25 @@ public class TileRelay extends TileEntity implements IEmcAcceptor, IEmcProvider 
         return accepted;
     }
 
+    public long acceptEMC(ForgeDirection side, long amount) {
+        double max = getMaximumEmc();
+        double accepted = Math.min((double) amount, max - storedEmc);
+        storedEmc += accepted;
+        return (long) Math.min((double) Long.MAX_VALUE, accepted);
+    }
+
     // IEmcProvider Implementation
     @Override
     public double provideEMC(ForgeDirection side, double amount) {
         double provided = Math.min(amount, storedEmc);
         storedEmc -= provided;
         return provided;
+    }
+
+    public long provideEMC(ForgeDirection side, long amount) {
+        double provided = Math.min((double) amount, storedEmc);
+        storedEmc -= provided;
+        return (long) Math.min((double) Long.MAX_VALUE, provided);
     }
 
     @Override

@@ -39,8 +39,8 @@ public class TileStoneTable extends TileEntity implements IInventory {
                         if (fuel != null && fuel.getItem() instanceof IItemEmc) {
                             IItemEmc emcItem = (IItemEmc) fuel.getItem();
                             double emcPerTick = cachedRecipe.emcCost / maxProgress;
-                            if (emcItem.getStoredEmc(fuel) >= emcPerTick) {
-                                emcItem.extractEmc(fuel, emcPerTick);
+                            if (ProjectEXUtils.getItemStoredEmc(emcItem, fuel) >= emcPerTick) {
+                                ProjectEXUtils.extractItemEmc(emcItem, fuel, emcPerTick);
                                 progress++;
                                 if (progress >= maxProgress) {
                                     progress = 0;

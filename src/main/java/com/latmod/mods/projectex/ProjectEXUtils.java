@@ -6,6 +6,9 @@ import com.latmod.mods.projectex.search.SearchHistoryManager;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import moze_intel.projecte.api.item.IItemEmc;
+import moze_intel.projecte.api.tile.IEmcAcceptor;
+import moze_intel.projecte.api.tile.IEmcProvider;
+import moze_intel.projecte.api.tile.IEmcStorage;
 import moze_intel.projecte.emc.FuelMapper;
 import moze_intel.projecte.gameObjs.ObjHandler;
 import moze_intel.projecte.gameObjs.container.TransmutationContainer;
@@ -37,6 +40,7 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,9 +56,24 @@ public class ProjectEXUtils {
 
     private static Field FIELD_INV_PLAYER;
     private static Field FIELD_INV_INVENTORY;
+    private static Field FIELD_INV_EMC;
+    private static boolean FIELD_INV_EMC_RESOLVED = false;
+    private static Method METHOD_INV_REMOVE_EMC;
+    private static boolean METHOD_INV_REMOVE_EMC_RESOLVED = false;
+
     private static Field FIELD_GUI_TEXTBOX;
     private static Field FIELD_GUI_LEFT;
     private static Field FIELD_GUI_TOP;
+
+    private static Method METHOD_GET_EMC_VALUE;
+    private static boolean METHOD_GET_EMC_VALUE_RESOLVED = false;
+    private static Method METHOD_DOES_ITEM_HAVE_EMC;
+    private static boolean METHOD_DOES_ITEM_HAVE_EMC_RESOLVED = false;
+
+    private static Method METHOD_TRANSMUTATION_GET_EMC;
+    private static boolean METHOD_TRANSMUTATION_GET_EMC_RESOLVED = false;
+    private static Method METHOD_TRANSMUTATION_SET_EMC;
+    private static boolean METHOD_TRANSMUTATION_SET_EMC_RESOLVED = false;
 
     static {
         try {
@@ -108,24 +127,73 @@ public class ProjectEXUtils {
         return (gui.height - 256) / 2;
     }
 
+    // --- Dynamic Polymorphic EMC Bridge ---
+
     public static double getEmcValueDouble(ItemStack stack) {
         if (stack == null || stack.getItem() == null) {
             return 0.0;
         }
         if (stack.hasTagCompound() && stack.getTagCompound().hasKey("test_emc")) {
-            double val = stack.getTagCompound().getDouble("test_emc");
-            System.out.println("DEBUG getEmcValueDouble found test_emc=" + val);
-            return val;
+            return stack.getTagCompound().getDouble("test_emc");
         }
         double custom = ProjectEXEMCRegistration.getProjectExEmc(stack);
         if (custom > 0.0) {
             return custom;
         }
+        if (!METHOD_GET_EMC_VALUE_RESOLVED) {
+            resolveGetEmcValueMethod();
+        }
+        if (METHOD_GET_EMC_VALUE != null) {
+            try {
+                Object res = METHOD_GET_EMC_VALUE.invoke(null, stack);
+                if (res instanceof Number) {
+                    return ((Number) res).doubleValue();
+                }
+            } catch (Throwable ignored) {
+                sanitizeEmcMapper();
+                try {
+                    Object res = METHOD_GET_EMC_VALUE.invoke(null, stack);
+                    if (res instanceof Number) {
+                        return ((Number) res).doubleValue();
+                    }
+                } catch (Throwable ignored2) {}
+            }
+        }
         try {
             return (double) EMCHelper.getEmcValue(stack);
         } catch (Throwable t) {
+            try {
+                moze_intel.projecte.emc.SimpleStack ss = new moze_intel.projecte.emc.SimpleStack(stack);
+                for (Field f : moze_intel.projecte.emc.EMCMapper.class.getDeclaredFields()) {
+                    if (Map.class.isAssignableFrom(f.getType())) {
+                        f.setAccessible(true);
+                        Map map = (Map) f.get(null);
+                        if (map != null && map.containsKey(ss)) {
+                            Object val = map.get(ss);
+                            if (val instanceof Number) {
+                                return ((Number) val).doubleValue();
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {}
             return 0.0;
         }
+    }
+
+    private static synchronized void resolveGetEmcValueMethod() {
+        if (METHOD_GET_EMC_VALUE_RESOLVED) return;
+        try {
+            Class<?> emcHelperClass = Class.forName("moze_intel.projecte.utils.EMCHelper");
+            for (Method m : emcHelperClass.getDeclaredMethods()) {
+                if (m.getName().equals("getEmcValue") && m.getParameterTypes().length == 1 && m.getParameterTypes()[0] == ItemStack.class) {
+                    m.setAccessible(true);
+                    METHOD_GET_EMC_VALUE = m;
+                    break;
+                }
+            }
+        } catch (Throwable ignored) {}
+        METHOD_GET_EMC_VALUE_RESOLVED = true;
     }
 
     public static boolean doesItemHaveEmc(ItemStack stack) {
@@ -135,30 +203,321 @@ public class ProjectEXUtils {
         if (ProjectEXEMCRegistration.getProjectExEmc(stack) > 0.0) {
             return true;
         }
+        if (stack.hasTagCompound() && stack.getTagCompound().hasKey("test_emc")) {
+            return stack.getTagCompound().getDouble("test_emc") > 0.0;
+        }
+        if (!METHOD_DOES_ITEM_HAVE_EMC_RESOLVED) {
+            resolveDoesItemHaveEmcMethod();
+        }
+        if (METHOD_DOES_ITEM_HAVE_EMC != null) {
+            try {
+                Object res = METHOD_DOES_ITEM_HAVE_EMC.invoke(null, stack);
+                if (res instanceof Boolean) {
+                    return (Boolean) res;
+                }
+            } catch (Throwable ignored) {
+                sanitizeEmcMapper();
+                try {
+                    Object res = METHOD_DOES_ITEM_HAVE_EMC.invoke(null, stack);
+                    if (res instanceof Boolean) {
+                        return (Boolean) res;
+                    }
+                } catch (Throwable ignored2) {}
+            }
+        }
         try {
             return EMCHelper.doesItemHaveEmc(stack);
         } catch (Throwable t) {
-            return false;
+            return getEmcValueDouble(stack) > 0.0;
         }
+    }
+
+    private static synchronized void resolveDoesItemHaveEmcMethod() {
+        if (METHOD_DOES_ITEM_HAVE_EMC_RESOLVED) return;
+        try {
+            Class<?> emcHelperClass = Class.forName("moze_intel.projecte.utils.EMCHelper");
+            for (Method m : emcHelperClass.getDeclaredMethods()) {
+                if (m.getName().equals("doesItemHaveEmc") && m.getParameterTypes().length == 1 && m.getParameterTypes()[0] == ItemStack.class) {
+                    m.setAccessible(true);
+                    METHOD_DOES_ITEM_HAVE_EMC = m;
+                    break;
+                }
+            }
+        } catch (Throwable ignored) {}
+        METHOD_DOES_ITEM_HAVE_EMC_RESOLVED = true;
+    }
+
+    public static double getPlayerEmcSafe(EntityPlayer player) {
+        if (player == null) return 0.0;
+
+        if (!METHOD_TRANSMUTATION_GET_EMC_RESOLVED) {
+            resolveTransmutationGetEmc();
+        }
+        if (METHOD_TRANSMUTATION_GET_EMC != null) {
+            try {
+                Object res = METHOD_TRANSMUTATION_GET_EMC.invoke(null, player);
+                if (res instanceof Number) {
+                    return ((Number) res).doubleValue();
+                }
+            } catch (Throwable ignored) {}
+        }
+
+        try {
+            moze_intel.projecte.playerData.TransmutationProps props = moze_intel.projecte.playerData.TransmutationProps.getDataFor(player);
+            if (props != null) {
+                for (Field f : props.getClass().getDeclaredFields()) {
+                    f.setAccessible(true);
+                    if (f.getType() == double.class) {
+                        return f.getDouble(props);
+                    } else if (f.getType() == long.class) {
+                        return (double) f.getLong(props);
+                    } else if (f.getType() == int.class) {
+                        return (double) f.getInt(props);
+                    } else if (Number.class.isAssignableFrom(f.getType())) {
+                        Object val = f.get(props);
+                        if (val instanceof Number) {
+                            return ((Number) val).doubleValue();
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+
+        try {
+            return Transmutation.getEmc(player);
+        } catch (Throwable ignored) {
+            return 0.0;
+        }
+    }
+
+    private static synchronized void resolveTransmutationGetEmc() {
+        if (METHOD_TRANSMUTATION_GET_EMC_RESOLVED) return;
+        try {
+            Class<?> clazz = Class.forName("moze_intel.projecte.playerData.Transmutation");
+            for (Method m : clazz.getDeclaredMethods()) {
+                if (m.getName().equals("getEmc") && m.getParameterTypes().length == 1 && EntityPlayer.class.isAssignableFrom(m.getParameterTypes()[0])) {
+                    m.setAccessible(true);
+                    METHOD_TRANSMUTATION_GET_EMC = m;
+                    break;
+                }
+            }
+        } catch (Throwable ignored) {}
+        METHOD_TRANSMUTATION_GET_EMC_RESOLVED = true;
+    }
+
+    public static void setPlayerEmcSafe(EntityPlayer player, double emc) {
+        if (player == null) return;
+        if (emc < 0.0 || Double.isNaN(emc)) emc = 0.0;
+        if (Double.isInfinite(emc) || emc > Double.MAX_VALUE) emc = Double.MAX_VALUE;
+
+        // 1. Update TransmutationProps fields
+        try {
+            moze_intel.projecte.playerData.TransmutationProps props = moze_intel.projecte.playerData.TransmutationProps.getDataFor(player);
+            if (props != null) {
+                for (Field f : props.getClass().getDeclaredFields()) {
+                    f.setAccessible(true);
+                    if (f.getType() == double.class) {
+                        f.setDouble(props, emc);
+                    } else if (f.getType() == long.class) {
+                        long longVal = (long) Math.min((double) Long.MAX_VALUE, emc);
+                        f.setLong(props, longVal);
+                    } else if (f.getType() == int.class) {
+                        int intVal = (int) Math.min((double) Integer.MAX_VALUE, emc);
+                        f.setInt(props, intVal);
+                    } else if (f.getType() == float.class) {
+                        f.setFloat(props, (float) emc);
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+
+        // 2. Call Transmutation.setEmc dynamically
+        if (!METHOD_TRANSMUTATION_SET_EMC_RESOLVED) {
+            resolveTransmutationSetEmc();
+        }
+        if (METHOD_TRANSMUTATION_SET_EMC != null) {
+            try {
+                Class<?> paramType = METHOD_TRANSMUTATION_SET_EMC.getParameterTypes()[1];
+                if (paramType == double.class) {
+                    METHOD_TRANSMUTATION_SET_EMC.invoke(null, player, emc);
+                } else if (paramType == long.class) {
+                    long longVal = (long) Math.min((double) Long.MAX_VALUE, emc);
+                    METHOD_TRANSMUTATION_SET_EMC.invoke(null, player, longVal);
+                } else if (paramType == int.class) {
+                    int intVal = (int) Math.min((double) Integer.MAX_VALUE, emc);
+                    METHOD_TRANSMUTATION_SET_EMC.invoke(null, player, intVal);
+                } else if (paramType == Number.class) {
+                    METHOD_TRANSMUTATION_SET_EMC.invoke(null, player, Double.valueOf(emc));
+                }
+            } catch (Throwable ignored) {}
+        } else {
+            try {
+                Transmutation.setEmc(player, emc);
+            } catch (Throwable ignored) {}
+        }
+    }
+
+    private static synchronized void resolveTransmutationSetEmc() {
+        if (METHOD_TRANSMUTATION_SET_EMC_RESOLVED) return;
+        try {
+            Class<?> clazz = Class.forName("moze_intel.projecte.playerData.Transmutation");
+            for (Method m : clazz.getDeclaredMethods()) {
+                if (m.getName().equals("setEmc") && m.getParameterTypes().length == 2 && EntityPlayer.class.isAssignableFrom(m.getParameterTypes()[0])) {
+                    m.setAccessible(true);
+                    METHOD_TRANSMUTATION_SET_EMC = m;
+                    break;
+                }
+            }
+        } catch (Throwable ignored) {}
+        METHOD_TRANSMUTATION_SET_EMC_RESOLVED = true;
     }
 
     // --- Transmutation Inventory 64-bit Helpers ---
 
-    public static void handleInventoryAddEmc(TransmutationInventory inv, double value) {
-        if (inv == null || value <= 0.0) return;
-        inv.emc += value;
-        if (inv.emc < 0.0 || Double.isNaN(inv.emc) || Double.isInfinite(inv.emc) || inv.emc >= Double.MAX_VALUE) {
-            inv.emc = Double.MAX_VALUE;
+    public static double getInventoryEmc(TransmutationInventory inv) {
+        if (inv == null) return 0.0;
+        if (!FIELD_INV_EMC_RESOLVED) {
+            resolveInvEmcField();
+        }
+        if (FIELD_INV_EMC != null) {
+            try {
+                Class<?> t = FIELD_INV_EMC.getType();
+                if (t == double.class) {
+                    return FIELD_INV_EMC.getDouble(inv);
+                } else if (t == long.class) {
+                    return (double) FIELD_INV_EMC.getLong(inv);
+                } else if (t == int.class) {
+                    return (double) FIELD_INV_EMC.getInt(inv);
+                } else if (Number.class.isAssignableFrom(t)) {
+                    Object val = FIELD_INV_EMC.get(inv);
+                    if (val instanceof Number) {
+                        return ((Number) val).doubleValue();
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+        try {
+            return inv.emc;
+        } catch (Throwable ignored) {
+            return 0.0;
+        }
+    }
+
+    public static void setInventoryEmc(TransmutationInventory inv, double emc) {
+        if (inv == null) return;
+        if (emc < 0.0 || Double.isNaN(emc)) emc = 0.0;
+        if (Double.isInfinite(emc) || emc > Double.MAX_VALUE) emc = Double.MAX_VALUE;
+
+        if (!FIELD_INV_EMC_RESOLVED) {
+            resolveInvEmcField();
+        }
+        if (FIELD_INV_EMC != null) {
+            try {
+                Class<?> t = FIELD_INV_EMC.getType();
+                if (t == double.class) {
+                    FIELD_INV_EMC.setDouble(inv, emc);
+                } else if (t == long.class) {
+                    long longVal = (long) Math.min((double) Long.MAX_VALUE, emc);
+                    FIELD_INV_EMC.setLong(inv, longVal);
+                } else if (t == int.class) {
+                    int intVal = (int) Math.min((double) Integer.MAX_VALUE, emc);
+                    FIELD_INV_EMC.setInt(inv, intVal);
+                } else if (t == float.class) {
+                    FIELD_INV_EMC.setFloat(inv, (float) emc);
+                }
+            } catch (Throwable ignored) {}
+        } else {
+            try {
+                inv.emc = emc;
+            } catch (Throwable ignored) {}
+        }
+    }
+
+    public static void removeInventoryEmc(TransmutationInventory inv, double amount) {
+        if (inv == null || amount <= 0.0) return;
+        boolean invoked = false;
+        if (!METHOD_INV_REMOVE_EMC_RESOLVED) {
+            resolveInvRemoveEmc();
+        }
+        if (METHOD_INV_REMOVE_EMC != null) {
+            try {
+                Class<?> pType = METHOD_INV_REMOVE_EMC.getParameterTypes()[0];
+                if (pType == double.class) {
+                    METHOD_INV_REMOVE_EMC.invoke(inv, amount);
+                    invoked = true;
+                } else if (pType == long.class) {
+                    long longAmount = (long) Math.min((double) Long.MAX_VALUE, amount);
+                    METHOD_INV_REMOVE_EMC.invoke(inv, longAmount);
+                    invoked = true;
+                } else if (pType == int.class) {
+                    int intAmount = (int) Math.min((double) Integer.MAX_VALUE, amount);
+                    METHOD_INV_REMOVE_EMC.invoke(inv, intAmount);
+                    invoked = true;
+                }
+            } catch (Throwable ignored) {}
+        }
+        if (!invoked) {
+            double current = getInventoryEmc(inv);
+            double newEmc = Math.max(0.0, current - amount);
+            setInventoryEmc(inv, newEmc);
         }
         EntityPlayer player = getPlayerFromInventory(inv);
         if (player != null) {
-            setPlayerEmcSafe(player, inv.emc);
+            setPlayerEmcSafe(player, getInventoryEmc(inv));
+        }
+    }
+
+    private static synchronized void resolveInvEmcField() {
+        if (FIELD_INV_EMC_RESOLVED) return;
+        try {
+            try {
+                Field f = TransmutationInventory.class.getDeclaredField("emc");
+                f.setAccessible(true);
+                FIELD_INV_EMC = f;
+            } catch (Throwable t) {
+                for (Field f : TransmutationInventory.class.getDeclaredFields()) {
+                    if (f.getType() == double.class || f.getType() == long.class || f.getType() == int.class) {
+                        f.setAccessible(true);
+                        FIELD_INV_EMC = f;
+                        break;
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+        FIELD_INV_EMC_RESOLVED = true;
+    }
+
+    private static synchronized void resolveInvRemoveEmc() {
+        if (METHOD_INV_REMOVE_EMC_RESOLVED) return;
+        try {
+            for (Method m : TransmutationInventory.class.getDeclaredMethods()) {
+                if (m.getName().equals("removeEmc") && m.getParameterTypes().length == 1) {
+                    m.setAccessible(true);
+                    METHOD_INV_REMOVE_EMC = m;
+                    break;
+                }
+            }
+        } catch (Throwable ignored) {}
+        METHOD_INV_REMOVE_EMC_RESOLVED = true;
+    }
+
+    public static void handleInventoryAddEmc(TransmutationInventory inv, double value) {
+        if (inv == null || value <= 0.0) return;
+        double current = getInventoryEmc(inv);
+        double newEmc = current + value;
+        if (newEmc < 0.0 || Double.isNaN(newEmc) || Double.isInfinite(newEmc) || newEmc >= Double.MAX_VALUE) {
+            newEmc = Double.MAX_VALUE;
+        }
+        setInventoryEmc(inv, newEmc);
+        EntityPlayer player = getPlayerFromInventory(inv);
+        if (player != null) {
+            setPlayerEmcSafe(player, newEmc);
         }
     }
 
     public static boolean handleInventoryHasMaxedEmc(TransmutationInventory inv) {
         if (inv == null) return false;
-        return inv.emc >= Double.MAX_VALUE;
+        return getInventoryEmc(inv) >= Double.MAX_VALUE;
     }
 
     public static EntityPlayer getPlayerFromInventory(TransmutationInventory inv) {
@@ -240,7 +599,7 @@ public class ProjectEXUtils {
             if (player.openContainer instanceof TransmutationContainer) {
                 TransmutationContainer tc = (TransmutationContainer) player.openContainer;
                 if (tc.transmutationInventory != null) {
-                    tc.transmutationInventory.emc = newEmc;
+                    setInventoryEmc(tc.transmutationInventory, newEmc);
                     if (singleLearned != null) {
                         if (tc.transmutationInventory.knowledge == null) {
                             tc.transmutationInventory.knowledge = new ArrayList<ItemStack>();
@@ -293,10 +652,12 @@ public class ProjectEXUtils {
     public static void handleUpdateOutputs(TransmutationInventory inv, boolean isSearchPage) {
         if (inv == null) return;
         EntityPlayer player = getPlayerFromInventory(inv);
+        double invEmc = getInventoryEmc(inv);
         if (player != null) {
-            double playerEmc = Transmutation.getEmc(player);
-            if (playerEmc > inv.emc || inv.emc == 0.0) {
-                inv.emc = playerEmc;
+            double playerEmc = getPlayerEmcSafe(player);
+            if (playerEmc > invEmc || invEmc == 0.0) {
+                setInventoryEmc(inv, playerEmc);
+                invEmc = playerEmc;
             }
             List<ItemStack> rawKnowledge = null;
             try {
@@ -362,7 +723,7 @@ public class ProjectEXUtils {
 
         if (lock != null) {
             double lockEmc = getEmcValueDouble(lock);
-            if (inv.emc < lockEmc) {
+            if (invEmc < lockEmc) {
                 MATCHING_ITEM_COUNTS.put(inv, 0);
                 TOTAL_PAGES.put(inv, 1);
                 return;
@@ -383,15 +744,15 @@ public class ProjectEXUtils {
                 double stackEmc = getEmcValueDouble(stack);
                 if (stackEmc > lockEmc) continue;
                 if (normalizedLock != null && ItemHelper.basicAreStacksEqual(normalizedLock, stack)) continue;
-                if (!predicate.test(stack, player, inv.emc)) continue;
+                if (!predicate.test(stack, player, invEmc)) continue;
                 matching.add(stack);
             }
         } else {
             for (ItemStack stack : knowledge) {
                 if (stack == null) continue;
                 double stackEmc = getEmcValueDouble(stack);
-                if (stackEmc > inv.emc) continue;
-                if (!predicate.test(stack, player, inv.emc)) continue;
+                if (stackEmc > invEmc) continue;
+                if (!predicate.test(stack, player, invEmc)) continue;
                 matching.add(stack);
             }
         }
@@ -439,11 +800,11 @@ public class ProjectEXUtils {
         try {
             EntityPlayer player = Minecraft.getMinecraft().thePlayer;
             if (player != null) {
-                double currentEmc = Transmutation.getEmc(player);
+                double currentEmc = getPlayerEmcSafe(player);
                 if (player.openContainer instanceof TransmutationContainer) {
                     TransmutationContainer container = (TransmutationContainer) player.openContainer;
                     if (container.transmutationInventory != null) {
-                        container.transmutationInventory.emc = currentEmc;
+                        setInventoryEmc(container.transmutationInventory, currentEmc);
                         handleUpdateOutputs(container.transmutationInventory, true);
                     }
                 }
@@ -458,7 +819,7 @@ public class ProjectEXUtils {
             FontRenderer font = Minecraft.getMinecraft().fontRenderer;
             String title = StatCollector.translateToLocal("pe.transmutation.transmute");
             font.drawString(title, 6, 8, 4210752);
-            String emcStr = EMCFormat.formatGuiEmc(inv.emc);
+            String emcStr = EMCFormat.formatGuiEmc(getInventoryEmc(inv));
             font.drawString(emcStr, 6, 102, 4210752);
         } catch (Throwable ignored) {}
     }
@@ -472,13 +833,15 @@ public class ProjectEXUtils {
                 inv = ((TransmutationContainer) gui.inventorySlots).transmutationInventory;
             }
             if (inv == null) return;
+            double invEmc = getInventoryEmc(inv);
             if (Minecraft.getMinecraft().thePlayer != null) {
                 EntityPlayer clientPlayer = Minecraft.getMinecraft().thePlayer;
-                double currentEmc = Transmutation.getEmc(clientPlayer);
+                double currentEmc = getPlayerEmcSafe(clientPlayer);
                 List<ItemStack> currentKnowledge = Transmutation.getKnowledge(clientPlayer);
                 int knowledgeSize = currentKnowledge != null ? currentKnowledge.size() : 0;
-                if ((currentEmc > 0.0 && Math.abs(currentEmc - inv.emc) > 1e-4) || inv.knowledge == null || (knowledgeSize > 0 && inv.knowledge.size() != knowledgeSize)) {
-                    inv.emc = currentEmc;
+                if ((currentEmc > 0.0 && Math.abs(currentEmc - invEmc) > 1e-4) || inv.knowledge == null || (knowledgeSize > 0 && inv.knowledge.size() != knowledgeSize)) {
+                    setInventoryEmc(inv, currentEmc);
+                    invEmc = currentEmc;
                     handleUpdateOutputs(inv, true);
                 }
             }
@@ -487,7 +850,7 @@ public class ProjectEXUtils {
             String title = StatCollector.translateToLocal("pe.transmutation.transmute");
             font.drawString(title, 6, 8, 4210752);
 
-            String emcStr = EMCFormat.formatGuiEmc(inv.emc);
+            String emcStr = EMCFormat.formatGuiEmc(invEmc);
             font.drawString(emcStr, 6, 102, 4210752);
 
             int totalMatching = getMatchingItemCount(inv);
@@ -742,7 +1105,8 @@ public class ProjectEXUtils {
         ItemStack copy = stack.copy();
         copy.stackSize = amount;
         double cost = getEmcValueDouble(copy) * (double) amount;
-        if (cost > inv.emc) {
+        double currentEmc = getInventoryEmc(inv);
+        if (cost > currentEmc) {
             copy.stackSize = 0;
             return copy;
         }
@@ -751,11 +1115,11 @@ public class ProjectEXUtils {
         Object lock = uuid != null ? getPlayerLock(uuid) : new Object();
 
         synchronized (lock) {
-            inv.removeEmc(cost);
+            removeInventoryEmc(inv, cost);
             inv.checkForUpdates();
 
             if (player != null) {
-                syncPlayerEMCAndKnowledge(player, inv.emc, null);
+                syncPlayerEMCAndKnowledge(player, getInventoryEmc(inv), null);
             } else {
                 handleUpdateOutputs(inv, true);
             }
@@ -768,7 +1132,7 @@ public class ProjectEXUtils {
         ItemStack stack = slot.getStack();
         if (stack == null) return true;
         double emc = getEmcValueDouble(stack);
-        return emc <= inv.emc;
+        return emc <= getInventoryEmc(inv);
     }
 
     public static void handleConsume(Slot slot, ItemStack stack, TransmutationInventory inv) {
@@ -819,7 +1183,7 @@ public class ProjectEXUtils {
 
             if (player != null) {
                 addKnowledgeSafe(copy, player);
-                syncPlayerEMCAndKnowledge(player, inv.emc, copy);
+                syncPlayerEMCAndKnowledge(player, getInventoryEmc(inv), copy);
             } else {
                 handleUpdateOutputs(inv, true);
             }
@@ -847,9 +1211,9 @@ public class ProjectEXUtils {
             }
             if (isItemEmc(stack)) {
                 IItemEmc itemEmc = (IItemEmc) stack.getItem();
-                double stored = itemEmc.getStoredEmc(stack);
+                double stored = getItemStoredEmc(itemEmc, stack);
                 handleInventoryAddEmc(inv, stored);
-                itemEmc.extractEmc(stack, stored);
+                extractItemEmc(itemEmc, stack, stored);
             }
 
             if (inv.knowledge == null) {
@@ -869,7 +1233,7 @@ public class ProjectEXUtils {
 
             if (player != null) {
                 addKnowledgeSafe(single, player);
-                syncPlayerEMCAndKnowledge(player, inv.emc, single.copy());
+                syncPlayerEMCAndKnowledge(player, getInventoryEmc(inv), single.copy());
             } else {
                 handleUpdateOutputs(inv, true);
             }
@@ -901,24 +1265,25 @@ public class ProjectEXUtils {
                 if (cost <= 0.0) {
                     return null;
                 }
-                int maxPossible = (int) Math.min(copy.getMaxStackSize(), Math.floor(inv.emc / cost));
+                double currentEmc = getInventoryEmc(inv);
+                int maxPossible = (int) Math.min(copy.getMaxStackSize(), Math.floor(currentEmc / cost));
                 if (maxPossible <= 0) {
                     return null;
                 }
                 int crafted = 0;
                 for (int i = 0; i < maxPossible; i++) {
-                    if (inv.emc < cost) break;
+                    if (getInventoryEmc(inv) < cost) break;
                     ItemStack single = copy.copy();
                     single.stackSize = 1;
                     if (player.inventory.addItemStackToInventory(single)) {
-                        inv.removeEmc(cost);
+                        removeInventoryEmc(inv, cost);
                         crafted++;
                     } else {
                         break;
                     }
                 }
                 if (crafted > 0) {
-                    syncPlayerEMCAndKnowledge(player, inv.emc, null);
+                    syncPlayerEMCAndKnowledge(player, getInventoryEmc(inv), null);
                     if (player.inventoryContainer != null) {
                         try {
                             player.inventoryContainer.detectAndSendChanges();
@@ -967,7 +1332,7 @@ public class ProjectEXUtils {
                 }
 
                 addKnowledgeSafe(learnedCopy, player);
-                syncPlayerEMCAndKnowledge(player, inv.emc, learnedCopy);
+                syncPlayerEMCAndKnowledge(player, getInventoryEmc(inv), learnedCopy);
                 if (player.inventoryContainer != null) {
                     try {
                         player.inventoryContainer.detectAndSendChanges();
@@ -978,6 +1343,196 @@ public class ProjectEXUtils {
         }
 
         return null;
+    }
+
+    // --- TileEntity and Item Dynamic EMC Helpers ---
+
+    public static double getTileStoredEmc(Object tile) {
+        if (tile == null) return 0.0;
+        try {
+            for (Method m : tile.getClass().getMethods()) {
+                if (m.getName().equals("getStoredEmc") && m.getParameterTypes().length == 0) {
+                    Object res = m.invoke(tile);
+                    if (res instanceof Number) {
+                        return ((Number) res).doubleValue();
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+        if (tile instanceof IEmcStorage) {
+            try {
+                return ((IEmcStorage) tile).getStoredEmc();
+            } catch (Throwable ignored) {}
+        }
+        return 0.0;
+    }
+
+    public static double getTileMaximumEmc(Object tile) {
+        if (tile == null) return 0.0;
+        try {
+            for (Method m : tile.getClass().getMethods()) {
+                if (m.getName().equals("getMaximumEmc") && m.getParameterTypes().length == 0) {
+                    Object res = m.invoke(tile);
+                    if (res instanceof Number) {
+                        return ((Number) res).doubleValue();
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+        if (tile instanceof IEmcStorage) {
+            try {
+                return ((IEmcStorage) tile).getMaximumEmc();
+            } catch (Throwable ignored) {}
+        }
+        return Double.MAX_VALUE;
+    }
+
+    public static double acceptTileEmc(Object tile, ForgeDirection side, double amount) {
+        if (tile == null || amount <= 0.0) return 0.0;
+        try {
+            for (Method m : tile.getClass().getMethods()) {
+                if (m.getName().equals("acceptEMC") && m.getParameterTypes().length == 2 && m.getParameterTypes()[0] == ForgeDirection.class) {
+                    Class<?> p2 = m.getParameterTypes()[1];
+                    if (p2 == double.class) {
+                        Object res = m.invoke(tile, side, amount);
+                        if (res instanceof Number) return ((Number) res).doubleValue();
+                    } else if (p2 == long.class) {
+                        long longAmount = (long) Math.min((double) Long.MAX_VALUE, amount);
+                        Object res = m.invoke(tile, side, longAmount);
+                        if (res instanceof Number) return ((Number) res).doubleValue();
+                    } else if (p2 == int.class) {
+                        int intAmount = (int) Math.min((double) Integer.MAX_VALUE, amount);
+                        Object res = m.invoke(tile, side, intAmount);
+                        if (res instanceof Number) return ((Number) res).doubleValue();
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+        if (tile instanceof IEmcAcceptor) {
+            try {
+                return ((IEmcAcceptor) tile).acceptEMC(side, amount);
+            } catch (Throwable ignored) {}
+        }
+        return 0.0;
+    }
+
+    public static double provideTileEmc(Object tile, ForgeDirection side, double amount) {
+        if (tile == null || amount <= 0.0) return 0.0;
+        try {
+            for (Method m : tile.getClass().getMethods()) {
+                if (m.getName().equals("provideEMC") && m.getParameterTypes().length == 2 && m.getParameterTypes()[0] == ForgeDirection.class) {
+                    Class<?> p2 = m.getParameterTypes()[1];
+                    if (p2 == double.class) {
+                        Object res = m.invoke(tile, side, amount);
+                        if (res instanceof Number) return ((Number) res).doubleValue();
+                    } else if (p2 == long.class) {
+                        long longAmount = (long) Math.min((double) Long.MAX_VALUE, amount);
+                        Object res = m.invoke(tile, side, longAmount);
+                        if (res instanceof Number) return ((Number) res).doubleValue();
+                    } else if (p2 == int.class) {
+                        int intAmount = (int) Math.min((double) Integer.MAX_VALUE, amount);
+                        Object res = m.invoke(tile, side, intAmount);
+                        if (res instanceof Number) return ((Number) res).doubleValue();
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+        if (tile instanceof IEmcProvider) {
+            try {
+                return ((IEmcProvider) tile).provideEMC(side, amount);
+            } catch (Throwable ignored) {}
+        }
+        return 0.0;
+    }
+
+    public static double getItemStoredEmc(IItemEmc item, ItemStack stack) {
+        if (item == null || stack == null) return 0.0;
+        try {
+            for (Method m : item.getClass().getMethods()) {
+                if (m.getName().equals("getStoredEmc") && m.getParameterTypes().length == 1 && m.getParameterTypes()[0] == ItemStack.class) {
+                    Object res = m.invoke(item, stack);
+                    if (res instanceof Number) return ((Number) res).doubleValue();
+                }
+            }
+        } catch (Throwable ignored) {}
+        try {
+            return item.getStoredEmc(stack);
+        } catch (Throwable ignored) {
+            return 0.0;
+        }
+    }
+
+    public static double getItemMaximumEmc(IItemEmc item, ItemStack stack) {
+        if (item == null || stack == null) return 0.0;
+        try {
+            for (Method m : item.getClass().getMethods()) {
+                if (m.getName().equals("getMaximumEmc") && m.getParameterTypes().length == 1 && m.getParameterTypes()[0] == ItemStack.class) {
+                    Object res = m.invoke(item, stack);
+                    if (res instanceof Number) return ((Number) res).doubleValue();
+                }
+            }
+        } catch (Throwable ignored) {}
+        try {
+            return item.getMaximumEmc(stack);
+        } catch (Throwable ignored) {
+            return Double.MAX_VALUE;
+        }
+    }
+
+    public static double extractItemEmc(IItemEmc item, ItemStack stack, double amount) {
+        if (item == null || stack == null || amount <= 0.0) return 0.0;
+        try {
+            for (Method m : item.getClass().getMethods()) {
+                if (m.getName().equals("extractEmc") && m.getParameterTypes().length == 2 && m.getParameterTypes()[0] == ItemStack.class) {
+                    Class<?> p2 = m.getParameterTypes()[1];
+                    if (p2 == double.class) {
+                        Object res = m.invoke(item, stack, amount);
+                        if (res instanceof Number) return ((Number) res).doubleValue();
+                    } else if (p2 == long.class) {
+                        long longAmount = (long) Math.min((double) Long.MAX_VALUE, amount);
+                        Object res = m.invoke(item, stack, longAmount);
+                        if (res instanceof Number) return ((Number) res).doubleValue();
+                    } else if (p2 == int.class) {
+                        int intAmount = (int) Math.min((double) Integer.MAX_VALUE, amount);
+                        Object res = m.invoke(item, stack, intAmount);
+                        if (res instanceof Number) return ((Number) res).doubleValue();
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+        try {
+            return item.extractEmc(stack, amount);
+        } catch (Throwable ignored) {
+            return 0.0;
+        }
+    }
+
+    public static double addItemEmc(IItemEmc item, ItemStack stack, double amount) {
+        if (item == null || stack == null || amount <= 0.0) return 0.0;
+        try {
+            for (Method m : item.getClass().getMethods()) {
+                if (m.getName().equals("addEmc") && m.getParameterTypes().length == 2 && m.getParameterTypes()[0] == ItemStack.class) {
+                    Class<?> p2 = m.getParameterTypes()[1];
+                    if (p2 == double.class) {
+                        Object res = m.invoke(item, stack, amount);
+                        if (res instanceof Number) return ((Number) res).doubleValue();
+                    } else if (p2 == long.class) {
+                        long longAmount = (long) Math.min((double) Long.MAX_VALUE, amount);
+                        Object res = m.invoke(item, stack, longAmount);
+                        if (res instanceof Number) return ((Number) res).doubleValue();
+                    } else if (p2 == int.class) {
+                        int intAmount = (int) Math.min((double) Integer.MAX_VALUE, amount);
+                        Object res = m.invoke(item, stack, intAmount);
+                        if (res instanceof Number) return ((Number) res).doubleValue();
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+        try {
+            return item.addEmc(stack, amount);
+        } catch (Throwable ignored) {
+            return 0.0;
+        }
     }
 
     // --- General Utility Methods ---
@@ -1150,25 +1705,30 @@ public class ProjectEXUtils {
         }
     }
 
-    public static void setPlayerEmcSafe(EntityPlayer player, double emc) {
-        if (player == null) return;
+    public static void sanitizeEmcMapper() {
         try {
-            moze_intel.projecte.playerData.TransmutationProps props = moze_intel.projecte.playerData.TransmutationProps.getDataFor(player);
-            if (props != null) {
-                for (Field f : props.getClass().getDeclaredFields()) {
-                    if (f.getType() == double.class) {
-                        f.setAccessible(true);
-                        f.setDouble(props, emc);
+            for (Field f : moze_intel.projecte.emc.EMCMapper.class.getDeclaredFields()) {
+                if (Map.class.isAssignableFrom(f.getType())) {
+                    f.setAccessible(true);
+                    Map map = (Map) f.get(null);
+                    if (map != null && !map.isEmpty()) {
+                        boolean hasLong = false;
+                        boolean hasInt = false;
+                        for (Object val : map.values()) {
+                            if (val instanceof Long) hasLong = true;
+                            if (val instanceof Integer) hasInt = true;
+                        }
+                        if (hasLong && hasInt) {
+                            for (Map.Entry<?, ?> entry : new ArrayList<Map.Entry<?, ?>>(map.entrySet())) {
+                                if (entry.getValue() instanceof Integer) {
+                                    ((Map) map).put(entry.getKey(), Long.valueOf(((Integer) entry.getValue()).longValue()));
+                                }
+                            }
+                        }
                     }
                 }
             }
-        } catch (Throwable t) {
-            t.printStackTrace();
-        }
-        try {
-            Transmutation.setEmc(player, emc);
         } catch (Throwable ignored) {}
-        System.out.println("setPlayerEmcSafe set emc=" + emc + " result=" + Transmutation.getEmc(player));
     }
 
     public static void ensureEmcRegistered(ItemStack stack) {
@@ -1180,12 +1740,23 @@ public class ProjectEXUtils {
                     if (Map.class.isAssignableFrom(f.getType())) {
                         f.setAccessible(true);
                         Map map = (Map) f.get(null);
-                        if (map == null) {
-                            map = new java.util.HashMap();
-                            f.set(null, map);
+                        if (map != null) {
+                            boolean isLongMap = false;
+                            for (Object val : map.values()) {
+                                if (val instanceof Long) {
+                                    isLongMap = true;
+                                    break;
+                                }
+                            }
+                            moze_intel.projecte.emc.SimpleStack ss = new moze_intel.projecte.emc.SimpleStack(stack);
+                            if (!map.containsKey(ss)) {
+                                if (isLongMap) {
+                                    map.put(ss, (long) Math.min((double) Long.MAX_VALUE, value));
+                                } else {
+                                    map.put(ss, (int) Math.min((double) Integer.MAX_VALUE, value));
+                                }
+                            }
                         }
-                        moze_intel.projecte.emc.SimpleStack ss = new moze_intel.projecte.emc.SimpleStack(stack);
-                        map.put(ss, (int) Math.min((double) Integer.MAX_VALUE, value));
                     }
                 }
             }

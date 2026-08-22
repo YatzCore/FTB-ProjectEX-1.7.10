@@ -28,7 +28,7 @@ import net.minecraft.item.ItemStack;
 public class ProjectEX {
     public static final String MOD_ID = "projectex";
     public static final String MOD_NAME = "Project EX";
-    public static final String VERSION = "1.5";
+    public static final String VERSION = "1.5.1";
 
     @Mod.Instance(MOD_ID)
     public static ProjectEX INSTANCE;

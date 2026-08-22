@@ -41,8 +41,8 @@ public class AlchemyTableRecipes {
 
     public void add(ItemStack input, ItemStack output) {
         if (input != null && output != null) {
-            double inEmc = ProjectEAPI.getEMCProxy().getValue(input);
-            double outEmc = ProjectEAPI.getEMCProxy().getValue(output);
+            double inEmc = ProjectEXUtils.getEmcValueDouble(input);
+            double outEmc = ProjectEXUtils.getEmcValueDouble(output);
             if (inEmc > 0 && outEmc > inEmc) {
                 double diff = outEmc - inEmc;
                 AlchemyTableRecipe recipe = new AlchemyTableRecipe(ProjectEXUtils.fixOutput(input), ProjectEXUtils.fixOutput(output), diff);

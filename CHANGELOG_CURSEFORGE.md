@@ -1,8 +1,22 @@
-# ProjectEXtended — Changelog (v1.0.0 -> v1.5.0)
+# ProjectEXtended — Changelog
 
-Minecraft 1.7.10 | Forge 10.13.4.1614+ | ProjectE 1.7.10-PE1.10.1+
+## Version 1.5.1
+
+Minecraft 1.7.10 | Forge 10.13.4.1614+ | Standard ProjectE PE1.10.1+ & FMProjectE
 
 ---
+
+### FMProjectE & Universal 64-Bit Compatibility
+- **Universal Polymorphic EMC Bridge**:
+  - Full dual-compatibility with both Standard ProjectE (`1.7.10-PE1.10.1+`) and **FMProjectE** (64-bit `long` API fork).
+  - Dynamically adapts to method descriptors returning `int`, `long`, `double`, or `Number` across `EMCHelper`, `IEMCProxy`, and `Transmutation`.
+  - Polymorphic player property reflection: automatically inspects and updates `double`, `long`, and `int` balance fields in `TransmutationProps`.
+  - Added dual 64-bit `long` and `double` overloads across all Stars (Magnum, Colossal, Final) and TileEntities (`TileLink`, `TileRelay`, `TileCollector`, `TileStoneTable`).
+  - Added type-safe `EMCMapper` registration and auto-sanitization to prevent `ClassCastException` in tooltips and item burning.
+
+---
+
+## Version 1.5.0
 
 ### Applied Energistics 2 Integration (Optional Soft Dependency)
 - **ME EMC Link**:

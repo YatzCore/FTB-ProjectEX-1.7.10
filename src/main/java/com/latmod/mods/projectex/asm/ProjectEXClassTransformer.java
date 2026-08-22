@@ -30,6 +30,10 @@ public class ProjectEXClassTransformer implements IClassTransformer, Opcodes {
             return transformGUITransmutation(basicClass);
         } else if ("moze_intel.projecte.network.packets.KnowledgeSyncPKT$Handler".equals(transformedName)) {
             return transformKnowledgeSyncPKTHandler(basicClass);
+        } else if ("com.latmod.mods.projectex.tile.TileLink".equals(transformedName)) {
+            return transformTileLink(basicClass);
+        } else if ("com.latmod.mods.projectex.tile.TileRelay".equals(transformedName)) {
+            return transformTileRelay(basicClass);
         }
 
         return basicClass;
@@ -46,16 +50,28 @@ public class ProjectEXClassTransformer implements IClassTransformer, Opcodes {
             }
 
             for (MethodNode method : classNode.methods) {
-                // addEmc(double) -> (D)V
-                if (method.name.equals("addEmc") && method.desc.equals("(D)V")) {
-                    method.instructions.clear();
-                    method.localVariables = null;
-                    InsnList list = new InsnList();
-                    list.add(new VarInsnNode(ALOAD, 0));
-                    list.add(new VarInsnNode(DLOAD, 1));
-                    list.add(new MethodInsnNode(INVOKESTATIC, "com/latmod/mods/projectex/ProjectEXUtils", "handleInventoryAddEmc", "(Lmoze_intel/projecte/gameObjs/container/inventory/TransmutationInventory;D)V", false));
-                    list.add(new InsnNode(RETURN));
-                    method.instructions.add(list);
+                // addEmc(double) -> (D)V OR addEmc(long) -> (J)V
+                if (method.name.equals("addEmc")) {
+                    if (method.desc.equals("(D)V")) {
+                        method.instructions.clear();
+                        method.localVariables = null;
+                        InsnList list = new InsnList();
+                        list.add(new VarInsnNode(ALOAD, 0));
+                        list.add(new VarInsnNode(DLOAD, 1));
+                        list.add(new MethodInsnNode(INVOKESTATIC, "com/latmod/mods/projectex/ProjectEXUtils", "handleInventoryAddEmc", "(Lmoze_intel/projecte/gameObjs/container/inventory/TransmutationInventory;D)V", false));
+                        list.add(new InsnNode(RETURN));
+                        method.instructions.add(list);
+                    } else if (method.desc.equals("(J)V")) {
+                        method.instructions.clear();
+                        method.localVariables = null;
+                        InsnList list = new InsnList();
+                        list.add(new VarInsnNode(ALOAD, 0));
+                        list.add(new VarInsnNode(LLOAD, 1));
+                        list.add(new InsnNode(L2D));
+                        list.add(new MethodInsnNode(INVOKESTATIC, "com/latmod/mods/projectex/ProjectEXUtils", "handleInventoryAddEmc", "(Lmoze_intel/projecte/gameObjs/container/inventory/TransmutationInventory;D)V", false));
+                        list.add(new InsnNode(RETURN));
+                        method.instructions.add(list);
+                    }
                 }
 
                 // hasMaxedEmc() -> ()Z
@@ -135,6 +151,8 @@ public class ProjectEXClassTransformer implements IClassTransformer, Opcodes {
                 field.access = (field.access & ~ACC_PRIVATE) | ACC_PUBLIC;
             }
 
+            String invFieldName = findTransmutationInventoryField(classNode);
+
             for (MethodNode method : classNode.methods) {
                 // decrStackSize(int) -> func_75209_a(I)Lnet/minecraft/item/ItemStack;
                 if ((method.name.equals("func_75209_a") || method.name.equals("decrStackSize")) && method.desc.equals("(I)Lnet/minecraft/item/ItemStack;")) {
@@ -144,7 +162,7 @@ public class ProjectEXClassTransformer implements IClassTransformer, Opcodes {
                     list.add(new VarInsnNode(ALOAD, 0));
                     list.add(new VarInsnNode(ILOAD, 1));
                     list.add(new VarInsnNode(ALOAD, 0));
-                    list.add(new FieldInsnNode(GETFIELD, "moze_intel/projecte/gameObjs/container/slots/transmutation/SlotOutput", "inv", "Lmoze_intel/projecte/gameObjs/container/inventory/TransmutationInventory;"));
+                    list.add(new FieldInsnNode(GETFIELD, "moze_intel/projecte/gameObjs/container/slots/transmutation/SlotOutput", invFieldName, "Lmoze_intel/projecte/gameObjs/container/inventory/TransmutationInventory;"));
                     list.add(new MethodInsnNode(INVOKESTATIC, "com/latmod/mods/projectex/ProjectEXUtils", "handleOutputTake", "(Lnet/minecraft/inventory/Slot;ILmoze_intel/projecte/gameObjs/container/inventory/TransmutationInventory;)Lnet/minecraft/item/ItemStack;", false));
                     list.add(new InsnNode(ARETURN));
                     method.instructions.add(list);
@@ -157,7 +175,7 @@ public class ProjectEXClassTransformer implements IClassTransformer, Opcodes {
                     InsnList list = new InsnList();
                     list.add(new VarInsnNode(ALOAD, 0));
                     list.add(new VarInsnNode(ALOAD, 0));
-                    list.add(new FieldInsnNode(GETFIELD, "moze_intel/projecte/gameObjs/container/slots/transmutation/SlotOutput", "inv", "Lmoze_intel/projecte/gameObjs/container/inventory/TransmutationInventory;"));
+                    list.add(new FieldInsnNode(GETFIELD, "moze_intel/projecte/gameObjs/container/slots/transmutation/SlotOutput", invFieldName, "Lmoze_intel/projecte/gameObjs/container/inventory/TransmutationInventory;"));
                     list.add(new MethodInsnNode(INVOKESTATIC, "com/latmod/mods/projectex/ProjectEXUtils", "canTakeOutput", "(Lnet/minecraft/inventory/Slot;Lmoze_intel/projecte/gameObjs/container/inventory/TransmutationInventory;)Z", false));
                     list.add(new InsnNode(IRETURN));
                     method.instructions.add(list);
@@ -183,6 +201,8 @@ public class ProjectEXClassTransformer implements IClassTransformer, Opcodes {
                 field.access = (field.access & ~ACC_PRIVATE) | ACC_PUBLIC;
             }
 
+            String invFieldName = findTransmutationInventoryField(classNode);
+
             for (MethodNode method : classNode.methods) {
                 // putStack(ItemStack) -> func_75215_d(Lnet/minecraft/item/ItemStack;)V
                 if ((method.name.equals("func_75215_d") || method.name.equals("putStack")) && method.desc.equals("(Lnet/minecraft/item/ItemStack;)V")) {
@@ -192,7 +212,7 @@ public class ProjectEXClassTransformer implements IClassTransformer, Opcodes {
                     list.add(new VarInsnNode(ALOAD, 0));
                     list.add(new VarInsnNode(ALOAD, 1));
                     list.add(new VarInsnNode(ALOAD, 0));
-                    list.add(new FieldInsnNode(GETFIELD, "moze_intel/projecte/gameObjs/container/slots/transmutation/SlotConsume", "inv", "Lmoze_intel/projecte/gameObjs/container/inventory/TransmutationInventory;"));
+                    list.add(new FieldInsnNode(GETFIELD, "moze_intel/projecte/gameObjs/container/slots/transmutation/SlotConsume", invFieldName, "Lmoze_intel/projecte/gameObjs/container/inventory/TransmutationInventory;"));
                     list.add(new MethodInsnNode(INVOKESTATIC, "com/latmod/mods/projectex/ProjectEXUtils", "handleConsume", "(Lnet/minecraft/inventory/Slot;Lnet/minecraft/item/ItemStack;Lmoze_intel/projecte/gameObjs/container/inventory/TransmutationInventory;)V", false));
                     list.add(new InsnNode(RETURN));
                     method.instructions.add(list);
@@ -205,7 +225,7 @@ public class ProjectEXClassTransformer implements IClassTransformer, Opcodes {
                     InsnList list = new InsnList();
                     list.add(new VarInsnNode(ALOAD, 1));
                     list.add(new VarInsnNode(ALOAD, 0));
-                    list.add(new FieldInsnNode(GETFIELD, "moze_intel/projecte/gameObjs/container/slots/transmutation/SlotConsume", "inv", "Lmoze_intel/projecte/gameObjs/container/inventory/TransmutationInventory;"));
+                    list.add(new FieldInsnNode(GETFIELD, "moze_intel/projecte/gameObjs/container/slots/transmutation/SlotConsume", invFieldName, "Lmoze_intel/projecte/gameObjs/container/inventory/TransmutationInventory;"));
                     list.add(new MethodInsnNode(INVOKESTATIC, "com/latmod/mods/projectex/ProjectEXUtils", "isConsumeValid", "(Lnet/minecraft/item/ItemStack;Lmoze_intel/projecte/gameObjs/container/inventory/TransmutationInventory;)Z", false));
                     list.add(new InsnNode(IRETURN));
                     method.instructions.add(list);
@@ -231,6 +251,8 @@ public class ProjectEXClassTransformer implements IClassTransformer, Opcodes {
                 field.access = (field.access & ~ACC_PRIVATE) | ACC_PUBLIC;
             }
 
+            String invFieldName = findTransmutationInventoryField(classNode);
+
             for (MethodNode method : classNode.methods) {
                 // putStack(ItemStack) -> func_75215_d(Lnet/minecraft/item/ItemStack;)V
                 if ((method.name.equals("func_75215_d") || method.name.equals("putStack")) && method.desc.equals("(Lnet/minecraft/item/ItemStack;)V")) {
@@ -240,7 +262,7 @@ public class ProjectEXClassTransformer implements IClassTransformer, Opcodes {
                     list.add(new VarInsnNode(ALOAD, 0));
                     list.add(new VarInsnNode(ALOAD, 1));
                     list.add(new VarInsnNode(ALOAD, 0));
-                    list.add(new FieldInsnNode(GETFIELD, "moze_intel/projecte/gameObjs/container/slots/transmutation/SlotLock", "inv", "Lmoze_intel/projecte/gameObjs/container/inventory/TransmutationInventory;"));
+                    list.add(new FieldInsnNode(GETFIELD, "moze_intel/projecte/gameObjs/container/slots/transmutation/SlotLock", invFieldName, "Lmoze_intel/projecte/gameObjs/container/inventory/TransmutationInventory;"));
                     list.add(new MethodInsnNode(INVOKESTATIC, "com/latmod/mods/projectex/ProjectEXUtils", "handleLockPutStack", "(Lnet/minecraft/inventory/Slot;Lnet/minecraft/item/ItemStack;Lmoze_intel/projecte/gameObjs/container/inventory/TransmutationInventory;)V", false));
                     list.add(new InsnNode(RETURN));
                     method.instructions.add(list);
@@ -372,5 +394,136 @@ public class ProjectEXClassTransformer implements IClassTransformer, Opcodes {
             t.printStackTrace();
             return basicClass;
         }
+    }
+
+    private byte[] transformTileLink(byte[] basicClass) {
+        try {
+            ClassNode classNode = new ClassNode();
+            ClassReader classReader = new ClassReader(basicClass);
+            classReader.accept(classNode, 0);
+
+            boolean hasStoredLong = false;
+            boolean hasMaxLong = false;
+            boolean hasAcceptLong = false;
+
+            for (MethodNode method : classNode.methods) {
+                if (method.name.equals("getStoredEmc") && method.desc.equals("()J")) hasStoredLong = true;
+                if (method.name.equals("getMaximumEmc") && method.desc.equals("()J")) hasMaxLong = true;
+                if (method.name.equals("acceptEMC") && method.desc.equals("(Lnet/minecraftforge/common/util/ForgeDirection;J)J")) hasAcceptLong = true;
+            }
+
+            if (!hasStoredLong) {
+                MethodNode mn = new MethodNode(ACC_PUBLIC | ACC_BRIDGE | ACC_SYNTHETIC, "getStoredEmc", "()J", null, null);
+                mn.instructions.add(new VarInsnNode(ALOAD, 0));
+                mn.instructions.add(new MethodInsnNode(INVOKEVIRTUAL, "com/latmod/mods/projectex/tile/TileLink", "getStoredEmc", "()D", false));
+                mn.instructions.add(new InsnNode(D2L));
+                mn.instructions.add(new InsnNode(LRETURN));
+                classNode.methods.add(mn);
+            }
+
+            if (!hasMaxLong) {
+                MethodNode mn = new MethodNode(ACC_PUBLIC | ACC_BRIDGE | ACC_SYNTHETIC, "getMaximumEmc", "()J", null, null);
+                mn.instructions.add(new LdcInsnNode(Long.MAX_VALUE));
+                mn.instructions.add(new InsnNode(LRETURN));
+                classNode.methods.add(mn);
+            }
+
+            if (!hasAcceptLong) {
+                MethodNode mn = new MethodNode(ACC_PUBLIC | ACC_BRIDGE | ACC_SYNTHETIC, "acceptEMC", "(Lnet/minecraftforge/common/util/ForgeDirection;J)J", null, null);
+                mn.instructions.add(new VarInsnNode(ALOAD, 0));
+                mn.instructions.add(new VarInsnNode(ALOAD, 1));
+                mn.instructions.add(new VarInsnNode(LLOAD, 2));
+                mn.instructions.add(new InsnNode(L2D));
+                mn.instructions.add(new MethodInsnNode(INVOKEVIRTUAL, "com/latmod/mods/projectex/tile/TileLink", "acceptEMC", "(Lnet/minecraftforge/common/util/ForgeDirection;D)D", false));
+                mn.instructions.add(new InsnNode(D2L));
+                mn.instructions.add(new InsnNode(LRETURN));
+                classNode.methods.add(mn);
+            }
+
+            ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
+            classNode.accept(classWriter);
+            return classWriter.toByteArray();
+        } catch (Throwable t) {
+            t.printStackTrace();
+            return basicClass;
+        }
+    }
+
+    private byte[] transformTileRelay(byte[] basicClass) {
+        try {
+            ClassNode classNode = new ClassNode();
+            ClassReader classReader = new ClassReader(basicClass);
+            classReader.accept(classNode, 0);
+
+            boolean hasStoredLong = false;
+            boolean hasMaxLong = false;
+            boolean hasAcceptLong = false;
+            boolean hasProvideLong = false;
+
+            for (MethodNode method : classNode.methods) {
+                if (method.name.equals("getStoredEmc") && method.desc.equals("()J")) hasStoredLong = true;
+                if (method.name.equals("getMaximumEmc") && method.desc.equals("()J")) hasMaxLong = true;
+                if (method.name.equals("acceptEMC") && method.desc.equals("(Lnet/minecraftforge/common/util/ForgeDirection;J)J")) hasAcceptLong = true;
+                if (method.name.equals("provideEMC") && method.desc.equals("(Lnet/minecraftforge/common/util/ForgeDirection;J)J")) hasProvideLong = true;
+            }
+
+            if (!hasStoredLong) {
+                MethodNode mn = new MethodNode(ACC_PUBLIC | ACC_BRIDGE | ACC_SYNTHETIC, "getStoredEmc", "()J", null, null);
+                mn.instructions.add(new VarInsnNode(ALOAD, 0));
+                mn.instructions.add(new MethodInsnNode(INVOKEVIRTUAL, "com/latmod/mods/projectex/tile/TileRelay", "getStoredEmc", "()D", false));
+                mn.instructions.add(new InsnNode(D2L));
+                mn.instructions.add(new InsnNode(LRETURN));
+                classNode.methods.add(mn);
+            }
+
+            if (!hasMaxLong) {
+                MethodNode mn = new MethodNode(ACC_PUBLIC | ACC_BRIDGE | ACC_SYNTHETIC, "getMaximumEmc", "()J", null, null);
+                mn.instructions.add(new VarInsnNode(ALOAD, 0));
+                mn.instructions.add(new MethodInsnNode(INVOKEVIRTUAL, "com/latmod/mods/projectex/tile/TileRelay", "getMaximumEmc", "()D", false));
+                mn.instructions.add(new InsnNode(D2L));
+                mn.instructions.add(new InsnNode(LRETURN));
+                classNode.methods.add(mn);
+            }
+
+            if (!hasAcceptLong) {
+                MethodNode mn = new MethodNode(ACC_PUBLIC | ACC_BRIDGE | ACC_SYNTHETIC, "acceptEMC", "(Lnet/minecraftforge/common/util/ForgeDirection;J)J", null, null);
+                mn.instructions.add(new VarInsnNode(ALOAD, 0));
+                mn.instructions.add(new VarInsnNode(ALOAD, 1));
+                mn.instructions.add(new VarInsnNode(LLOAD, 2));
+                mn.instructions.add(new InsnNode(L2D));
+                mn.instructions.add(new MethodInsnNode(INVOKEVIRTUAL, "com/latmod/mods/projectex/tile/TileRelay", "acceptEMC", "(Lnet/minecraftforge/common/util/ForgeDirection;D)D", false));
+                mn.instructions.add(new InsnNode(D2L));
+                mn.instructions.add(new InsnNode(LRETURN));
+                classNode.methods.add(mn);
+            }
+
+            if (!hasProvideLong) {
+                MethodNode mn = new MethodNode(ACC_PUBLIC | ACC_BRIDGE | ACC_SYNTHETIC, "provideEMC", "(Lnet/minecraftforge/common/util/ForgeDirection;J)J", null, null);
+                mn.instructions.add(new VarInsnNode(ALOAD, 0));
+                mn.instructions.add(new VarInsnNode(ALOAD, 1));
+                mn.instructions.add(new VarInsnNode(LLOAD, 2));
+                mn.instructions.add(new InsnNode(L2D));
+                mn.instructions.add(new MethodInsnNode(INVOKEVIRTUAL, "com/latmod/mods/projectex/tile/TileRelay", "provideEMC", "(Lnet/minecraftforge/common/util/ForgeDirection;D)D", false));
+                mn.instructions.add(new InsnNode(D2L));
+                mn.instructions.add(new InsnNode(LRETURN));
+                classNode.methods.add(mn);
+            }
+
+            ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
+            classNode.accept(classWriter);
+            return classWriter.toByteArray();
+        } catch (Throwable t) {
+            t.printStackTrace();
+            return basicClass;
+        }
+    }
+
+    private static String findTransmutationInventoryField(ClassNode classNode) {
+        for (FieldNode field : classNode.fields) {
+            if (field.desc.equals("Lmoze_intel/projecte/gameObjs/container/inventory/TransmutationInventory;")) {
+                return field.name;
+            }
+        }
+        return "inv";
     }
 }

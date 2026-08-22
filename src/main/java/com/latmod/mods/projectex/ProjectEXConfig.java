@@ -59,6 +59,17 @@ public class ProjectEXConfig {
         4749120.0, 18996480.0, 75985920.0, 303943680.0, 1215774720.0, 4863098880.0, 19452395520.0, 48000000000000.0
     };
 
+    static {
+        for (int i = 0; i < 16; i++) {
+            collectorSunEmc[i] = DEFAULT_SUN_EMC[i];
+            collectorMoonEmc[i] = DEFAULT_SUN_EMC[i] / 2.0;
+            collectorMaxEmc[i] = DEFAULT_SUN_EMC[i] * 10000.0;
+            relayTransferEmc[i] = DEFAULT_RELAY_TRANSFER[i];
+            relayMaxEmc[i] = DEFAULT_RELAY_TRANSFER[i] * 10000.0;
+            powerFlowerEmc[i] = DEFAULT_POWER_FLOWER_EMC[i];
+        }
+    }
+
     // Exact 1.12.2 Matter EMC Formula: 3 * prev + 6 * AeternalisFuel (49,152)
     private static final long[] DEFAULT_MATTER_EMC = {
         1449984L,        // Magenta (0)
