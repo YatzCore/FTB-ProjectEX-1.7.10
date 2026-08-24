@@ -1,8 +1,8 @@
-# ProjectEXtended (1.7.10) — Version 1.5
+# ProjectEXtended (1.7.10) — Version 1.5.1
 
 A feature-complete 1.7.10 backport and expansion of **Project EX**, originally created by LatvianModder and the FTB Team for Minecraft 1.12.2.
 
-This version introduces an integrated **64-Bit Transmutation Engine**, **Advanced Transmutation Search Filters**, **Applied Energistics 2 Integration**, and **WAILA Diagnostics**, maintaining full compatibility with ProjectE 1.7.10 while supporting endgame EMC values up to Double.MAX_VALUE ($1.79 \times 10^{308}$) without numerical overflows or client crashes.
+This version introduces an integrated **64-Bit Transmutation Engine**, **Universal Dual Compatibility (Standard ProjectE & FMProjectE)**, **Advanced Transmutation Search Filters**, **Applied Energistics 2 Integration**, and **WAILA Diagnostics**, maintaining full compatibility with ProjectE 1.7.10 while supporting endgame EMC values up to Double.MAX_VALUE ($1.79 \times 10^{308}$) without numerical overflows or client crashes.
 
 ---
 
@@ -62,7 +62,7 @@ This version introduces an integrated **64-Bit Transmutation Engine**, **Advance
 
 - **Minecraft**: 1.7.10
 - **Forge**: 10.13.4.1614 or newer
-- **ProjectE**: 1.7.10-PE1.10.1 or newer
+- **ProjectE**: Standard ProjectE `1.7.10-PE1.10.1+` **OR** `FMProjectE`
 - **Applied Energistics 2** *(Optional)*: rv3-beta-6 or compatible
 - **WAILA** *(Optional)*: 1.5.10 or compatible
 
@@ -76,7 +76,7 @@ cd FTB-ProjectEX-1.7.10
 ./gradlew.bat build --no-daemon
 ```
 
-The output binary `FTB-ProjectEX-1.7.10-1.5.jar` will be generated in `build/libs/`.
+The output binary `FTB-ProjectEX-1.7.10-1.5.1.jar` will be generated in `build/libs/`.
 
 ---
 
